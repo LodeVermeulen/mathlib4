@@ -11,10 +11,22 @@ import Mathlib.Data.Greedoid.Predefs
 
 /-!
 # Greedoid
+Some explanation of greedoid
 
+Reference
+KORTE, Bernhard; LOVÁSZ, László; SCHRADER, Rainer. Greedoids. Springer Science & Business Media, 2012.
 -/
 
+/-- 'Greedoid' is a set system (E, ℱ) satisfying the following:
+    - ℱ contains an empty set.
+    - ℱ satisfies the accessible property.
+    - ℱ satisfies the exchange property (for Greedoid).
+
+    Any element in ℱ is called 'feasible'.
+    Also, the feasible set ℱ is written as `feasibleSet`.
+-/
 structure Greedoid (α : Type _) [DecidableEq α] [Fintype α] where
+  /-- A collection of feasible sets. -/
   feasibleSet : Finset (Finset α)
   containsEmpty : ∅ ∈ feasibleSet
   accessibleProperty : Greedoid.AccessibleProperty feasibleSet
