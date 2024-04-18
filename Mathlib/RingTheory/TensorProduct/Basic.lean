@@ -55,14 +55,10 @@ open TensorProduct
 section Semiring
 
 variable {R A B M N P : Type*} [CommSemiring R]
-
 variable [Semiring A] [Algebra R A] [Semiring B] [Algebra R B]
-
 variable [AddCommMonoid M] [AddCommMonoid N] [AddCommMonoid P]
 variable [Module R M] [Module R N] [Module R P]
-
 variable (r : R) (f g : M →ₗ[R] N)
-
 variable (A)
 
 /-- `baseChange A f` for `f : M →ₗ[R] N` is the `A`-linear map `A ⊗[R] M →ₗ[A] A ⊗[R] N`.
@@ -144,11 +140,8 @@ end Semiring
 section Ring
 
 variable {R A B M N : Type*} [CommRing R]
-
 variable [Ring A] [Algebra R A] [Ring B] [Algebra R B]
-
 variable [AddCommGroup M] [Module R M] [AddCommGroup N] [Module R N]
-
 variable (f g : M →ₗ[R] N)
 
 @[simp]
@@ -523,11 +516,9 @@ instance instCommSemiring : CommSemiring (A ⊗[R] B) where
       · intro a₂ b₂
         simp [mul_comm]
       · intro a₂ b₂ ha hb
-        -- porting note (#10745): was `simp` not `rw`
-        rw [mul_add, add_mul, ha, hb]
+        simp [mul_add, add_mul, ha, hb]
     · intro x₁ x₂ h₁ h₂
-      -- porting note (#10745): was `simp` not `rw`
-      rw [mul_add, add_mul, h₁, h₂]
+      simp [mul_add, add_mul, h₁, h₂]
 
 end CommSemiring
 
@@ -666,7 +657,7 @@ theorem algEquivOfLinearEquivTripleTensorProduct_apply (f h_mul h_one x) :
 #align algebra.tensor_product.alg_equiv_of_linear_equiv_triple_tensor_product_apply Algebra.TensorProduct.algEquivOfLinearEquivTripleTensorProduct_apply
 
 section lift
-variable [IsScalarTower R S A] [IsScalarTower R S C]
+variable [IsScalarTower R S C]
 
 /-- The forward direction of the universal property of tensor products of algebras; any algebra
 morphism from the tensor product can be factored as the product of two algebra morphisms that
@@ -716,9 +707,8 @@ This is `Algebra.TensorProduct.lift` as an equivalence.
 See also `GradedTensorProduct.liftEquiv` for an alternative commutativity requirement for graded
 algebra. -/
 @[simps]
-def liftEquiv [IsScalarTower R S A] [IsScalarTower R S C] :
-    {fg : (A →ₐ[S] C) × (B →ₐ[R] C) // ∀ x y, Commute (fg.1 x) (fg.2 y)}
-      ≃ ((A ⊗[R] B) →ₐ[S] C) where
+def liftEquiv : {fg : (A →ₐ[S] C) × (B →ₐ[R] C) // ∀ x y, Commute (fg.1 x) (fg.2 y)}
+    ≃ ((A ⊗[R] B) →ₐ[S] C) where
   toFun fg := lift fg.val.1 fg.val.2 fg.prop
   invFun f' := ⟨(f'.comp includeLeft, (f'.restrictScalars R).comp includeRight), fun x y =>
     ((Commute.one_right _).tmul (Commute.one_left _)).map f'⟩
@@ -976,11 +966,8 @@ end
 section
 
 variable [CommSemiring R] [Semiring A] [Semiring B] [CommSemiring S]
-
 variable [Algebra R A] [Algebra R B] [Algebra R S]
-
 variable (f : A →ₐ[R] S) (g : B →ₐ[R] S)
-
 variable (R)
 
 /-- `LinearMap.mul'` is an `AlgHom` on commutative rings. -/
@@ -1061,7 +1048,6 @@ universe uM uι
 variable {M : Type uM} {ι : Type uι}
 variable [CommSemiring R] [Semiring A] [Algebra R A]
 variable [AddCommMonoid M] [Module R M] (b : Basis ι R M)
-
 variable (A)
 
 /-- Given an `R`-algebra `A` and an `R`-basis of `M`, this is an `R`-linear isomorphism
@@ -1126,7 +1112,7 @@ namespace LinearMap
 open Algebra.TensorProduct
 
 variable {R M₁ M₂ ι ι₂ : Type*} (A : Type*)
-  [Fintype ι] [Fintype ι₂] [DecidableEq ι] [DecidableEq ι₂]
+  [Fintype ι] [Finite ι₂] [DecidableEq ι] [DecidableEq ι₂]
   [CommSemiring R] [CommSemiring A] [Algebra R A]
   [AddCommMonoid M₁] [Module R M₁] [AddCommMonoid M₂] [Module R M₂]
 
@@ -1141,9 +1127,7 @@ end LinearMap
 namespace Module
 
 variable {R S A M N : Type*} [CommSemiring R] [CommSemiring S] [Semiring A]
-
 variable [AddCommMonoid M] [AddCommMonoid N]
-
 variable [Algebra R S] [Algebra S A] [Algebra R A]
 variable [Module R M] [Module S M] [Module A M] [Module R N]
 variable [IsScalarTower R A M] [IsScalarTower S A M] [IsScalarTower R S M]
@@ -1168,23 +1152,24 @@ theorem endTensorEndAlgHom_apply (f : End A M) (g : End R N) :
 
 end Module
 
+theorem Subalgebra.finite_sup {K L : Type*} [CommRing K] [CommRing L] [Algebra K L]
+    (E1 E2 : Subalgebra K L) [Module.Finite K E1] [Module.Finite K E2] :
+    Module.Finite K ↥(E1 ⊔ E2) := by
+  rw [← E1.range_val, ← E2.range_val, ← Algebra.TensorProduct.productMap_range]
+  exact Module.Finite.range (Algebra.TensorProduct.productMap E1.val E2.val).toLinearMap
+
+@[deprecated Subalgebra.finite_sup] -- 2024-04-11
 theorem Subalgebra.finiteDimensional_sup {K L : Type*} [Field K] [CommRing L] [Algebra K L]
     (E1 E2 : Subalgebra K L) [FiniteDimensional K E1] [FiniteDimensional K E2] :
-    FiniteDimensional K (E1 ⊔ E2 : Subalgebra K L) := by
-  rw [← E1.range_val, ← E2.range_val, ← Algebra.TensorProduct.productMap_range]
-  exact (Algebra.TensorProduct.productMap E1.val E2.val).toLinearMap.finiteDimensional_range
+    FiniteDimensional K (E1 ⊔ E2 : Subalgebra K L) := Subalgebra.finite_sup E1 E2
 #align subalgebra.finite_dimensional_sup Subalgebra.finiteDimensional_sup
 
 namespace TensorProduct.Algebra
 
 variable {R A B M : Type*}
-
 variable [CommSemiring R] [AddCommMonoid M] [Module R M]
-
 variable [Semiring A] [Semiring B] [Module A M] [Module B M]
-
 variable [Algebra R A] [Algebra R B]
-
 variable [IsScalarTower R A M] [IsScalarTower R B M]
 
 /-- An auxiliary definition, used for constructing the `Module (A ⊗[R] B) M` in
@@ -1227,7 +1212,7 @@ protected def module : Module (A ⊗[R] B) M where
   smul_add x m₁ m₂ := by simp only [(· • ·), map_add]
   add_smul x y m := by simp only [(· • ·), map_add, LinearMap.add_apply]
   one_smul m := by
-    -- Porting note: was one `simp only` not two in lean 3
+    -- Porting note: was one `simp only`, not two
     simp only [(· • ·), Algebra.TensorProduct.one_def]
     simp only [moduleAux_apply, one_smul]
   mul_smul x y m := by
@@ -1240,28 +1225,22 @@ protected def module : Module (A ⊗[R] B) M where
     · intro a b
       simp only [(· • ·), mul_zero, map_zero, LinearMap.zero_apply]
     · intro a₁ b₁ a₂ b₂
-      -- porting note; was one `simp only` not two and a `rw` in mathlib3
+      -- Porting note: was one `simp only`, not two
       simp only [(· • ·), Algebra.TensorProduct.tmul_mul_tmul]
-      simp only [moduleAux_apply, mul_smul]
-      rw [smul_comm a₁ b₂]
+      simp only [moduleAux_apply, mul_smul, smul_comm a₁ b₂]
     · intro z w hz hw a b
-      -- Porting note: was one `simp only` but random stuff doesn't work
+      -- Porting note: was one `simp only`, but random stuff doesn't work
       simp only [(· • ·)] at hz hw ⊢
-      simp only [moduleAux_apply]
-      rw [mul_add]  -- simp only doesn't work
-      simp only [LinearMap.map_add, LinearMap.add_apply, moduleAux_apply, hz, hw, smul_add]
+      simp only [moduleAux_apply, mul_add, LinearMap.map_add,
+        LinearMap.add_apply, moduleAux_apply, hz, hw, smul_add]
     · intro z w _ _
       simp only [(· • ·), mul_zero, map_zero, LinearMap.zero_apply]
     · intro a b z w hz hw
-      simp only [(· • ·)] at hz hw
-      simp only [(· • ·), LinearMap.map_add, add_mul, LinearMap.add_apply, hz, hw]
+      simp only [(· • ·)] at hz hw ⊢
+      simp only [LinearMap.map_add, add_mul, LinearMap.add_apply, hz, hw]
     · intro u v _ _ z w hz hw
-      simp only [(· • ·)] at hz hw
-      -- Porting note: no idea why this is such a struggle
-      simp only [(· • ·)]
-      rw [add_mul, LinearMap.map_add, LinearMap.add_apply, hz, hw]
-      simp only [LinearMap.map_add, LinearMap.add_apply]
-      rw [add_add_add_comm]
+      simp only [(· • ·)] at hz hw ⊢
+      simp only [add_mul, LinearMap.map_add, LinearMap.add_apply, hz, hw, add_add_add_comm]
 #align tensor_product.algebra.module TensorProduct.Algebra.module
 
 attribute [local instance] TensorProduct.Algebra.module
