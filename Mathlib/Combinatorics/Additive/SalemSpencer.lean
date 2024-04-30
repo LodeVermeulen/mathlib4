@@ -40,6 +40,32 @@ the size of the biggest Salem-Spencer subset of `{0, ..., n - 1}`.
 Salem-Spencer, Roth, arithmetic progression, average, three-free
 -/
 
+namespace Set
+variable {α β : Type*} {f : α → β} {s : Set β} {t : Set α}
+
+lemma preimage_subset (hs : s ⊆ f '' t) (hf : Set.InjOn f (f ⁻¹' s)) : f ⁻¹' s ⊆ t := by
+  rintro a ha
+  obtain ⟨b, hb, hba⟩ := hs ha
+  rwa [hf ha _ hba.symm]
+  simpa [hba]
+
+end Set
+
+namespace Finset
+variable {α β : Type*}
+
+lemma card_preimage (s : Finset β) (f : α → β) (hf) (hf' : Set.SurjOn f Set.univ s) :
+    (s.preimage f hf).card = s.card := by
+  classical
+  rw [← card_image_of_injOn (by simpa), image_preimage, filter_eq_self.2]
+  simpa [Set.SurjOn] using hf'
+
+lemma preimage_subset' [DecidableEq β] {f : α → β} {s : Finset β} {t : Finset α}
+    (hs : s ⊆ t.image f) {hf} : s.preimage f hf ⊆ t := by
+  rw [← coe_subset, coe_preimage]; exact Set.preimage_subset (mod_cast hs) hf
+
+end Finset
+
 
 open Finset Function Metric Nat
 
@@ -127,7 +153,7 @@ lemma IsMulFreimanHom.mulSalemSpencer (hf : IsMulFreimanHom s t 2 f) (hf' : s.In
 
 /-- Arithmetic progressions of length three are preserved under `2`-Freiman isomorphisms. --/
 @[to_additive]
-lemma IsMulFreimanIso.mulSalemSpencer (hf : IsMulFreimanIso s t 2 f) :
+lemma IsMulFreimanIso.mulSalemSpencer_congr (hf : IsMulFreimanIso s t 2 f) :
     MulSalemSpencer s ↔ MulSalemSpencer t where
   mpr := hf.isMulFreimanHom.mulSalemSpencer hf.bijOn.injOn
   mp hs a b c hfa hfb hfc habc := by
@@ -360,11 +386,11 @@ theorem MulSalemSpencer.le_mulRothNumber (hs : MulSalemSpencer (s : Set α)) (h 
 #align add_salem_spencer.le_add_roth_number AddSalemSpencer.le_addRothNumber
 
 @[to_additive]
-theorem MulSalemSpencer.roth_number_eq (hs : MulSalemSpencer (s : Set α)) :
+theorem MulSalemSpencer.mulRothNumber_eq (hs : MulSalemSpencer (s : Set α)) :
     mulRothNumber s = s.card :=
   (mulRothNumber_le _).antisymm <| hs.le_mulRothNumber <| Subset.refl _
-#align mul_salem_spencer.roth_number_eq MulSalemSpencer.roth_number_eq
-#align add_salem_spencer.roth_number_eq AddSalemSpencer.roth_number_eq
+#align mul_salem_spencer.roth_number_eq MulSalemSpencer.mulRothNumber_eq
+#align add_salem_spencer.roth_number_eq AddSalemSpencer.addRothNumber_eq
 
 @[to_additive (attr := simp)]
 theorem mulRothNumber_empty : mulRothNumber (∅ : Finset α) = 0 :=
@@ -374,7 +400,7 @@ theorem mulRothNumber_empty : mulRothNumber (∅ : Finset α) = 0 :=
 
 @[to_additive (attr := simp)]
 theorem mulRothNumber_singleton (a : α) : mulRothNumber ({a} : Finset α) = 1 := by
-  refine' MulSalemSpencer.roth_number_eq _
+  refine' MulSalemSpencer.mulRothNumber_eq _
   rw [coe_singleton]
   exact mulSalemSpencer_singleton a
 #align mul_roth_number_singleton mulRothNumber_singleton
@@ -419,6 +445,47 @@ theorem mulRothNumber_lt_of_forall_not_mulSalemSpencer
 #align add_roth_number_lt_of_forall_not_add_salem_spencer addRothNumber_lt_of_forall_not_addSalemSpencer
 
 end Monoid
+
+section CommMonoid
+variable [CommMonoid α] [CommMonoid β] [DecidableEq β] {A : Finset α} {B : Finset β} {f : α → β}
+
+@[to_additive]
+lemma IsMulFreimanHom.mulRothNumber_mono (hf : IsMulFreimanHom A B 2 f) (hf' : Set.BijOn f A B) :
+    mulRothNumber B ≤ mulRothNumber A := by
+  obtain ⟨s, hsB, hcard, hs⟩ := mulRothNumber_spec B
+  have hfs : Set.InjOn f (A ∩ f ⁻¹' s) := hf'.injOn.mono (Set.inter_subset_left _ _)
+  rw [← hcard, ← s.card_preimage f hfs]
+  have hsA : preimage s f hfs ⊆ A := preimage_subset' $ by
+    rwa [← coe_subset, coe_image, hf'.image_eq, coe_subset]
+  refine MulSalemSpencer.le_mulRothNumber ?_ hsA
+  rw [coe_preimage]
+  exact (hf.subset (mod_cast hsA) (Set.mapsTo_preimage _ _)).mulSalemSpencer hfs hs
+  exact hf'.surjOn.mono (Set.subset_univ _) (mod_cast hsB)
+
+@[to_additive]
+lemma IsMulFreimanIso.mulRothNumber_congr (hf : IsMulFreimanIso A B 2 f) :
+    mulRothNumber A = mulRothNumber B := by
+  refine le_antisymm ?_ ?_
+  · obtain ⟨s, hsA, hcard, hs⟩ := mulRothNumber_spec A
+    rw [← coe_subset] at hsA
+    have hfs : Set.InjOn f s := hf.bijOn.injOn.mono hsA
+    have := (hf.subset hsA hfs.bijOn_image).mulSalemSpencer_congr.1 hs
+    rw [← coe_image] at this
+    rw [← hcard, ← Finset.card_image_of_injOn hfs]
+    refine this.le_mulRothNumber ?_
+    rw [← coe_subset, coe_image]
+    exact (hf.bijOn.mapsTo.mono hsA Subset.rfl).image_subset
+  · obtain ⟨s, hsB, hcard, hs⟩ := mulRothNumber_spec B
+    rw [← coe_subset] at hsB
+    have hfs : Set.InjOn f s := hf.bijOn.injOn.mono hsA
+    have := (hf.subset hsA hfs.bijOn_image).mulSalemSpencer_congr.1 hs
+    rw [← coe_image] at this
+    rw [← hcard, ← Finset.card_image_of_injOn hfs]
+    refine this.le_mulRothNumber ?_
+    rw [← coe_subset, coe_image]
+    exact (hf.bijOn.mapsTo.mono hsA Subset.rfl).image_subset
+
+end CommMonoid
 
 section CancelCommMonoid
 
@@ -526,5 +593,13 @@ theorem rothNumberNat_isBigO_id : (fun N => (rothNumberNat N : ℝ)) =O[atTop] f
   rothNumberNat_isBigOWith_id.isBigO
 set_option linter.uppercaseLean3 false in
 #align roth_number_nat_is_O_id rothNumberNat_isBigO_id
+
+lemma Fin.addRothNumber_eq_rothNumberNat (hkn : 2 * k ≤ n) :
+    addRothNumber (Iio k : Finset (Fin n.succ)) = rothNumberNat k := by
+  (isAddFreimanIso_Iio two_ne_zero hkn).addRothNumber_congr
+
+lemma Fin.addRothNumber_le_rothNumberNat (k n : ℕ) :
+    addRothNumber (Iio k : Finset (Fin n.succ)) ≤ rothNumberNat k := by
+  refine IsAddFreimanHom.addRothNumber_mono sorry sorry
 
 end rothNumberNat
