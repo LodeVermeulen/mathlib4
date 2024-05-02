@@ -697,6 +697,21 @@ theorem le_val_last (i : Fin (n + 1)) : i ≤ n := by
   exact Fin.le_last i
 #align fin.le_coe_last Fin.le_val_last
 
+variable {n a b : ℕ}
+
+lemma cast_le_cast' (han : a ≤ n) (hbn : b ≤ n) : (a : Fin n.succ) ≤ b ↔ a ≤ b := by
+  rw [← Nat.lt_succ_iff] at han hbn
+  simp [le_iff_val_le_val, -val_fin_le, Nat.mod_eq_of_lt, han, hbn]
+
+lemma cast_lt_cast (han : a ≤ n) (hbn : b ≤ n) : (a : Fin n.succ) < b ↔ a < b := by
+  rw [← Nat.lt_succ_iff] at han hbn; simp [lt_iff_val_lt_val, Nat.mod_eq_of_lt, han, hbn]
+
+lemma cast_mono (hbn : b ≤ n) (hab : a ≤ b) : (a : Fin n.succ) ≤ b :=
+  (cast_le_cast' (hab.trans hbn) hbn).2 hab
+
+lemma cast_strictMono (hbn : b ≤ n) (hab : a < b) : (a : Fin n.succ) < b :=
+  (cast_lt_cast (hab.le.trans hbn) hbn).2 hab
+
 end OfNatCoe
 
 #align fin.add_one_pos Fin.add_one_pos

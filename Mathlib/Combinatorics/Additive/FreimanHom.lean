@@ -176,6 +176,12 @@ lemma isMulFreimanHom_const {b : β} (hb : b ∈ B) : IsMulFreimanHom A B n fun 
   mapsTo _ _ := hb
   map_prod_eq_map_prod s t _ _ hs ht _ := by simp only [map_const', hs, prod_replicate, ht]
 
+@[to_additive (attr := simp)]
+lemma isMulFreimanIso_empty : IsMulFreimanIso (∅ : Set α) (∅ : Set β) n f where
+  bijOn := bijOn_empty _
+  map_prod_eq_map_prod s t hs ht := by
+    simp [eq_zero_of_forall_not_mem hs, eq_zero_of_forall_not_mem ht]
+
 @[to_additive] lemma IsMulFreimanHom.mul (h₁ : IsMulFreimanHom A B₁ n f₁)
     (h₂ : IsMulFreimanHom A B₂ n f₂) : IsMulFreimanHom A (B₁ * B₂) n (f₁ * f₂) where
   -- TODO: Extract `Set.MapsTo.mul` from this proof
@@ -283,6 +289,50 @@ lemma IsMulFreimanHom.inv (hf : IsMulFreimanHom A B n f) : IsMulFreimanHom A B�
       h₂.map_prod_eq_map_prod hsA htA hs ht h]
 
 end DivisionCommMonoid
+
+namespace Fin
+variable {k m n : ℕ}
+
+private lemma aux (hm : m ≠ 0) (hkmn : m * k ≤ n) : k < n.succ :=
+  Nat.lt_succ_iff.2 $ le_trans (Nat.le_mul_of_pos_left _ hm.bot_lt) hkmn
+
+/-- **No wrap-around principle**.
+
+The first `k + 1` elements of `Fin (n + 1)` are `m`-Freiman isomorphic to the first `k + 1` elements
+of `ℕ` assuming there is no wrap-around. -/
+lemma isAddFreimanIso_Iic (hm : m ≠ 0) (hkmn : m * k ≤ n) :
+    IsAddFreimanIso (Iic (k : Fin n.succ)) (Iic k) m val where
+  bijOn.left := by simp [MapsTo, Fin.le_iff_val_le_val, Nat.mod_eq_of_lt, aux hm hkmn]
+  bijOn.right.left := val_injective.injOn _
+  bijOn.right.right x (hx : x ≤ _) :=
+    ⟨x, by simpa [le_iff_val_le_val, -val_fin_le, Nat.mod_eq_of_lt, aux hm hkmn, hx.trans_lt]⟩
+  map_sum_eq_map_sum s t hsA htA hs ht := by
+    have (u : Multiset (Fin n.succ)) : Nat.castRingHom _ (u.map val).sum = u.sum := by simp
+    rw [← this, ← this]
+    have {u : Multiset (Fin n.succ)} (huk : ∀ x ∈ u, x ≤ k) (hu : card u = m) :
+        (u.map val).sum < n.succ := Nat.lt_succ_iff.2 $ hkmn.trans' $ by
+      rw [← hu, ← card_map]
+      refine sum_le_card_nsmul (u.map val) k ?_
+      simpa [le_iff_val_le_val, -val_fin_le, Nat.mod_eq_of_lt, aux hm hkmn] using huk
+    exact ⟨congr_arg _, CharP.natCast_injOn_Iio _ n.succ (this hsA hs) (this htA ht)⟩
+
+/-- **No wrap-around principle**.
+
+The first `k` elements of `Fin (n + 1)` are `m`-Freiman isomorphic to the first `k` elements of `ℕ`
+assuming there is no wrap-around. -/
+lemma isAddFreimanIso_Iio (hm : m ≠ 0) (hkmn : m * k ≤ n) :
+    IsAddFreimanIso (Iio (k : Fin n.succ)) (Iio k) m val := by
+  obtain _ | k := k
+  · simp [← bot_eq_zero]; simp [← _root_.bot_eq_zero, -bot_eq_zero']
+  have hkmn' : m * k ≤ n := (Nat.mul_le_mul_left _ k.le_succ).trans hkmn
+  convert isAddFreimanIso_Iic hm hkmn' using 1 <;> ext x
+  · simp [lt_iff_val_lt_val, le_iff_val_le_val, -val_fin_le, -val_fin_lt, Nat.mod_eq_of_lt,
+      aux hm hkmn']
+    simp_rw [← Nat.cast_add_one]
+    rw [Fin.val_cast_of_lt (aux hm hkmn), Nat.lt_succ_iff]
+  · simp [Nat.succ_eq_add_one, Nat.lt_succ_iff]
+
+end Fin
 
 #noalign add_freiman_hom
 #noalign freiman_hom
