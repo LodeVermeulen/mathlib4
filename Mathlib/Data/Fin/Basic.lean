@@ -136,7 +136,7 @@ section coe
 #align fin.ext_iff Fin.ext_iff
 #align fin.coe_injective Fin.val_injective
 
-theorem val_eq_val (a b : Fin n) : (a : ℕ) = b ↔ a = b :=
+@[simp] theorem val_eq_val (a b : Fin n) : (a : ℕ) = b ↔ a = b :=
   ext_iff.symm
 #align fin.coe_eq_coe Fin.val_eq_val
 
