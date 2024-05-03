@@ -3,9 +3,9 @@ Copyright (c) 2021 Yaël Dillies, Bhavik Mehta. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yaël Dillies, Bhavik Mehta
 -/
-import Mathlib.Algebra.Group.Freiman
 import Mathlib.Analysis.Asymptotics.Asymptotics
 import Mathlib.Analysis.Convex.StrictConvexSpace
+import Mathlib.Combinatorics.Additive.FreimanHom
 
 #align_import combinatorics.additive.salem_spencer from "leanprover-community/mathlib"@"acf5258c81d0bc7cb254ed026c1352e685df306c"
 
@@ -60,7 +60,7 @@ multiplicative average of any two distinct elements is not in the set. -/
 @[to_additive "A Salem-Spencer, aka non averaging, set `s` in an additive monoid
 is a set such that the average of any two distinct elements is not in the set."]
 def MulSalemSpencer : Prop :=
-  ∀ ⦃a b c⦄, a ∈ s → b ∈ s → c ∈ s → a * b = c * c → a = b
+  ∀ ⦃a⦄, a ∈ s → ∀ ⦃b⦄, b ∈ s → ∀ ⦃c⦄, c ∈ s → a * c = b * b → a = b
 #align mul_salem_spencer MulSalemSpencer
 #align add_salem_spencer AddSalemSpencer
 
@@ -68,14 +68,13 @@ def MulSalemSpencer : Prop :=
 @[to_additive "Whether a given finset is Salem-Spencer is decidable."]
 instance {α : Type*} [DecidableEq α] [Monoid α] {s : Finset α} :
     Decidable (MulSalemSpencer (s : Set α)) :=
-  decidable_of_iff (∀ a ∈ s, ∀ b ∈ s, ∀ c ∈ s, a * b = c * c → a = b)
-    ⟨fun h a b c ha hb hc => h a ha b hb c hc, fun h _ ha _ hb _ hc => h ha hb hc⟩
+  decidable_of_iff (∀ a ∈ s, ∀ b ∈ s, ∀ c ∈ s, a * c = b * b → a = b) Iff.rfl
 
 variable {s t}
 
 @[to_additive]
 theorem MulSalemSpencer.mono (h : t ⊆ s) (hs : MulSalemSpencer s) : MulSalemSpencer t :=
-  fun _ _ _ ha hb hc => hs (h ha) (h hb) (h hc)
+  fun _ ha _ hb _ hc ↦ hs (h ha) (h hb) (h hc)
 #align mul_salem_spencer.mono MulSalemSpencer.mono
 #align add_salem_spencer.mono AddSalemSpencer.mono
 
@@ -86,7 +85,7 @@ theorem mulSalemSpencer_empty : MulSalemSpencer (∅ : Set α) := fun _ _ _ ha =
 
 @[to_additive]
 theorem Set.Subsingleton.mulSalemSpencer (hs : s.Subsingleton) : MulSalemSpencer s :=
-  fun _ _ _ ha hb _ _ => hs ha hb
+  fun _ ha _ hb _ _ _ ↦ hs ha hb
 #align set.subsingleton.mul_salem_spencer Set.Subsingleton.mulSalemSpencer
 #align set.subsingleton.add_salem_spencer Set.Subsingleton.addSalemSpencer
 
@@ -98,7 +97,7 @@ theorem mulSalemSpencer_singleton (a : α) : MulSalemSpencer ({a} : Set α) :=
 
 @[to_additive AddSalemSpencer.prod]
 theorem MulSalemSpencer.prod {t : Set β} (hs : MulSalemSpencer s) (ht : MulSalemSpencer t) :
-    MulSalemSpencer (s ×ˢ t) := fun _ _ _ ha hb hc h =>
+    MulSalemSpencer (s ×ˢ t) := fun _ ha _ hb _ hc h ↦
   Prod.ext (hs ha.1 hb.1 hc.1 (Prod.ext_iff.1 h).1) (ht ha.2 hb.2 hc.2 (Prod.ext_iff.1 h).2)
 #align mul_salem_spencer.prod MulSalemSpencer.prod
 #align add_salem_spencer.prod AddSalemSpencer.prod
@@ -106,7 +105,7 @@ theorem MulSalemSpencer.prod {t : Set β} (hs : MulSalemSpencer s) (ht : MulSale
 @[to_additive]
 theorem mulSalemSpencer_pi {ι : Type*} {α : ι → Type*} [∀ i, Monoid (α i)] {s : ∀ i, Set (α i)}
     (hs : ∀ i, MulSalemSpencer (s i)) : MulSalemSpencer ((univ : Set ι).pi s) :=
-  fun _ _ _ ha hb hc h =>
+  fun _ ha _ hb _ hc h ↦
   funext fun i => hs i (ha i trivial) (hb i trivial) (hc i trivial) <| congr_fun h i
 #align mul_salem_spencer_pi mulSalemSpencer_pi
 #align add_salem_spencer_pi addSalemSpencer_pi
@@ -114,24 +113,33 @@ theorem mulSalemSpencer_pi {ι : Type*} {α : ι → Type*} [∀ i, Monoid (α i
 end Monoid
 
 section CommMonoid
+variable [CommMonoid α] [CommMonoid β] {s : Set α} {t : Set β} {f : α → β} {a : α}
 
-variable [CommMonoid α] [CommMonoid β] {s : Set α} {a : α}
-
+/-- Arithmetic progressions of length three are preserved under `2`-Freiman homomorphisms. --/
 @[to_additive]
-theorem MulSalemSpencer.of_image [FunLike F α β] [FreimanHomClass F s β 2] (f : F)
-    (hf : s.InjOn f) (h : MulSalemSpencer (f '' s)) : MulSalemSpencer s :=
-  fun _ _ _ ha hb hc habc => hf ha hb <|
-    h (mem_image_of_mem _ ha) (mem_image_of_mem _ hb) (mem_image_of_mem _ hc) <|
-      map_mul_map_eq_map_mul_map f ha hb hc hc habc
-#align mul_salem_spencer.of_image MulSalemSpencer.of_image
-#align add_salem_spencer.of_image AddSalemSpencer.of_image
+lemma IsMulFreimanHom.mulSalemSpencer (hf : IsMulFreimanHom 2 s t f) (hf' : s.InjOn f)
+    (ht : MulSalemSpencer t) : MulSalemSpencer s :=
+  fun _ ha _ hb _ hc habc ↦ hf' ha hb <| ht (hf.mapsTo ha) (hf.mapsTo hb) (hf.mapsTo hc) <|
+    hf.mul_eq_mul ha hc hb hb habc
+#align mul_salem_spencer.of_image IsMulFreimanHom.mulSalemSpencer
+#align add_salem_spencer.of_image IsAddFreimanHom.addSalemSpencer
 
--- TODO: Generalize to Freiman homs
+/-- Arithmetic progressions of length three are preserved under `2`-Freiman isomorphisms. --/
+@[to_additive]
+lemma IsMulFreimanIso.mulSalemSpencer_congr (hf : IsMulFreimanIso 2 s t f) :
+    MulSalemSpencer s ↔ MulSalemSpencer t where
+  mpr := hf.isMulFreimanHom.mulSalemSpencer hf.bijOn.injOn
+  mp hs a hfa b hfb c hfc habc := by
+    obtain ⟨a, ha, rfl⟩ := hf.bijOn.surjOn hfa
+    obtain ⟨b, hb, rfl⟩ := hf.bijOn.surjOn hfb
+    obtain ⟨c, hc, rfl⟩ := hf.bijOn.surjOn hfc
+    exact congr_arg f $ hs ha hb hc $ (hf.mul_eq_mul ha hc hb hb).1 habc
+
 @[to_additive]
 theorem MulSalemSpencer.image [FunLike F α β] [MulHomClass F α β] (f : F) (hf : (s * s).InjOn f)
     (h : MulSalemSpencer s) : MulSalemSpencer (f '' s) := by
-  rintro _ _ _ ⟨a, ha, rfl⟩ ⟨b, hb, rfl⟩ ⟨c, hc, rfl⟩ habc
-  rw [h ha hb hc (hf (mul_mem_mul ha hb) (mul_mem_mul hc hc) <| by rwa [map_mul, map_mul])]
+  rintro _ ⟨a, ha, rfl⟩ _ ⟨b, hb, rfl⟩ _ ⟨c, hc, rfl⟩ habc
+  rw [h ha hb hc (hf (mul_mem_mul ha hc) (mul_mem_mul hb hb) <| by rwa [map_mul, map_mul])]
 #align mul_salem_spencer.image MulSalemSpencer.image
 #align add_salem_spencer.image AddSalemSpencer.image
 
@@ -141,73 +149,56 @@ section CancelCommMonoid
 
 variable [CancelCommMonoid α] {s : Set α} {a : α}
 
-@[to_additive]
-theorem mulSalemSpencer_insert : MulSalemSpencer (insert a s) ↔ MulSalemSpencer s ∧
-    (∀ ⦃b c⦄, b ∈ s → c ∈ s → a * b = c * c → a = b) ∧
-    ∀ ⦃b c⦄, b ∈ s → c ∈ s → b * c = a * a → b = c := by
-  refine' ⟨fun hs => ⟨hs.mono (subset_insert _ _),
-    fun b c hb hc => hs (Or.inl rfl) (Or.inr hb) (Or.inr hc),
-    fun b c hb hc => hs (Or.inr hb) (Or.inr hc) (Or.inl rfl)⟩, _⟩
-  rintro ⟨hs, ha, ha'⟩ b c d hb hc hd h
+lemma MulSalemSpencer.eq_right (hs : MulSalemSpencer s) :
+    ∀ ⦃a⦄, a ∈ s → ∀ ⦃b⦄, b ∈ s → ∀ ⦃c⦄, c ∈ s → a * c = b * b → b = c := by
+  rintro a ha b hb c hc habc
+  obtain rfl := hs ha hb hc habc
+  simpa using habc.symm
+
+@[to_additive] lemma mulSalemSpencer_insert :
+    MulSalemSpencer (insert a s) ↔ MulSalemSpencer s ∧
+      (∀ ⦃b⦄, b ∈ s → ∀ ⦃c⦄, c ∈ s → a * c = b * b → a = b) ∧
+        ∀ ⦃b⦄, b ∈ s → ∀ ⦃c⦄, c ∈ s → b * c = a * a → b = a := by
+  refine ⟨fun hs ↦ ⟨hs.mono (subset_insert _ _),
+    fun b hb c hc ↦ hs (Or.inl rfl) (Or.inr hb) (Or.inr hc),
+    fun b hb c hc ↦ hs (Or.inr hb) (Or.inl rfl) (Or.inr hc)⟩, ?_⟩
+  rintro ⟨hs, ha, ha'⟩ b hb c hc d hd h
   rw [mem_insert_iff] at hb hc hd
   obtain rfl | hb := hb <;> obtain rfl | hc := hc
   · rfl
   all_goals obtain rfl | hd := hd
-  · exact (mul_left_cancel h).symm
+  · exact (ha' hc hc h.symm).symm
   · exact ha hc hd h
   · exact mul_right_cancel h
-  · exact (ha hb hd <| (mul_comm _ _).trans h).symm
-  · exact ha' hb hc h
+  · exact ha' hb hd h
+  · obtain rfl := ha hc hb ((mul_comm _ _).trans h)
+    exact ha' hb hc h
   · exact hs hb hc hd h
 #align mul_salem_spencer_insert mulSalemSpencer_insert
 #align add_salem_spencer_insert addSalemSpencer_insert
 
-@[to_additive (attr := simp)]
-theorem mulSalemSpencer_pair (a b : α) : MulSalemSpencer ({a, b} : Set α) := by
-  rw [mulSalemSpencer_insert]
-  refine' ⟨mulSalemSpencer_singleton _, _, _⟩
-  · rintro c d (rfl : c = b) (rfl : d = c)
-    exact mul_right_cancel
-  · rintro c d (rfl : c = b) (rfl : d = c) _
-    rfl
-#align mul_salem_spencer_pair mulSalemSpencer_pair
-#align add_salem_spencer_pair addSalemSpencer_pair
+@[to_additive]
+theorem MulSalemSpencer.smul_set (hs : MulSalemSpencer s) : MulSalemSpencer (a • s) := by
+  rintro _ ⟨b, hb, rfl⟩ _ ⟨c, hc, rfl⟩ _ ⟨d, hd, rfl⟩ h
+  exact congr_arg (a • ·) $ hs hb hc hd $ by simpa [mul_mul_mul_comm _ _ a] using h
+#align mul_salem_spencer.mul_left MulSalemSpencer.smul_set
+#align add_salem_spencer.add_left AddSalemSpencer.vadd_set
+
+#noalign mul_salem_spencer.mul_right
+#noalign add_salem_spencer.add_right
 
 @[to_additive]
-theorem MulSalemSpencer.mul_left (hs : MulSalemSpencer s) : MulSalemSpencer ((a * ·) '' s) := by
-  rintro _ _ _ ⟨b, hb, rfl⟩ ⟨c, hc, rfl⟩ ⟨d, hd, rfl⟩ h
-  rw [mul_mul_mul_comm, mul_mul_mul_comm a d] at h
-  rw [hs hb hc hd (mul_left_cancel h)]
-#align mul_salem_spencer.mul_left MulSalemSpencer.mul_left
-#align add_salem_spencer.add_left AddSalemSpencer.add_left
-
-@[to_additive]
-theorem MulSalemSpencer.mul_right (hs : MulSalemSpencer s) : MulSalemSpencer ((· * a) '' s) := by
-  rintro _ _ _ ⟨b, hb, rfl⟩ ⟨c, hc, rfl⟩ ⟨d, hd, rfl⟩ h
-  rw [mul_mul_mul_comm, mul_mul_mul_comm d] at h
-  rw [hs hb hc hd (mul_right_cancel h)]
-#align mul_salem_spencer.mul_right MulSalemSpencer.mul_right
-#align add_salem_spencer.add_right AddSalemSpencer.add_right
-
-@[to_additive]
-theorem mulSalemSpencer_mul_left_iff : MulSalemSpencer ((a * ·) '' s) ↔ MulSalemSpencer s :=
-  ⟨fun hs b c d hb hc hd h =>
+theorem mulSalemSpencer_smul_set : MulSalemSpencer ((a * ·) '' s) ↔ MulSalemSpencer s :=
+  ⟨fun hs b hb c hc d hd h ↦
     mul_left_cancel
       (hs (mem_image_of_mem _ hb) (mem_image_of_mem _ hc) (mem_image_of_mem _ hd) <| by
         rw [mul_mul_mul_comm, h, mul_mul_mul_comm]),
-    MulSalemSpencer.mul_left⟩
-#align mul_salem_spencer_mul_left_iff mulSalemSpencer_mul_left_iff
-#align add_salem_spencer_add_left_iff addSalemSpencer_add_left_iff
+    MulSalemSpencer.smul_set⟩
+#align mul_salem_spencer_mul_left_iff mulSalemSpencer_smul_set
+#align add_salem_spencer_add_left_iff addSalemSpencer_vadd_set
 
-@[to_additive]
-theorem mulSalemSpencer_mul_right_iff : MulSalemSpencer ((· * a) '' s) ↔ MulSalemSpencer s :=
-  ⟨fun hs b c d hb hc hd h =>
-    mul_right_cancel
-      (hs (Set.mem_image_of_mem _ hb) (Set.mem_image_of_mem _ hc) (Set.mem_image_of_mem _ hd) <| by
-        rw [mul_mul_mul_comm, h, mul_mul_mul_comm]),
-    MulSalemSpencer.mul_right⟩
-#align mul_salem_spencer_mul_right_iff mulSalemSpencer_mul_right_iff
-#align add_salem_spencer_add_right_iff addSalemSpencer_add_right_iff
+#noalign mul_salem_spencer_mul_right_iff
+#noalign add_salem_spencer_add_right_iff
 
 end CancelCommMonoid
 
@@ -218,10 +209,10 @@ variable [OrderedCancelCommMonoid α] {s : Set α} {a : α}
 @[to_additive]
 theorem mulSalemSpencer_insert_of_lt (hs : ∀ i ∈ s, i < a) :
     MulSalemSpencer (insert a s) ↔
-      MulSalemSpencer s ∧ ∀ ⦃b c⦄, b ∈ s → c ∈ s → a * b = c * c → a = b := by
+      MulSalemSpencer s ∧ ∀ ⦃b⦄, b ∈ s → ∀ ⦃c⦄, c ∈ s → a * c = b * b → a = b := by
   refine' mulSalemSpencer_insert.trans _
   rw [← and_assoc]
-  exact and_iff_left fun b c hb hc h => ((mul_lt_mul_of_lt_of_lt (hs _ hb) (hs _ hc)).ne h).elim
+  exact and_iff_left fun b hb c hc h => ((mul_lt_mul_of_lt_of_lt (hs _ hb) (hs _ hc)).ne h).elim
 #align mul_salem_spencer_insert_of_lt mulSalemSpencer_insert_of_lt
 #align add_salem_spencer_insert_of_lt addSalemSpencer_insert_of_lt
 
@@ -231,50 +222,36 @@ section CancelCommMonoidWithZero
 
 variable [CancelCommMonoidWithZero α] [NoZeroDivisors α] {s : Set α} {a : α}
 
-theorem MulSalemSpencer.mul_left₀ (hs : MulSalemSpencer s) (ha : a ≠ 0) :
+theorem MulSalemSpencer.smul_set₀ (hs : MulSalemSpencer s) (ha : a ≠ 0) :
     MulSalemSpencer ((a * ·) '' s) := by
-  rintro _ _ _ ⟨b, hb, rfl⟩ ⟨c, hc, rfl⟩ ⟨d, hd, rfl⟩ h
-  rw [mul_mul_mul_comm, mul_mul_mul_comm a d] at h
-  rw [hs hb hc hd (mul_left_cancel₀ (mul_ne_zero ha ha) h)]
-#align mul_salem_spencer.mul_left₀ MulSalemSpencer.mul_left₀
+  rintro _ ⟨b, hb, rfl⟩ _ ⟨c, hc, rfl⟩ _ ⟨d, hd, rfl⟩ h
+  exact congr_arg (a • ·) $ hs hb hc hd $ by simpa [mul_mul_mul_comm _ _ a, ha] using h
+#align mul_salem_spencer.mul_left₀ MulSalemSpencer.smul_set₀
 
-theorem MulSalemSpencer.mul_right₀ (hs : MulSalemSpencer s) (ha : a ≠ 0) :
-    MulSalemSpencer ((· * a) '' s) := by
-  rintro _ _ _ ⟨b, hb, rfl⟩ ⟨c, hc, rfl⟩ ⟨d, hd, rfl⟩ h
-  rw [mul_mul_mul_comm, mul_mul_mul_comm d] at h
-  rw [hs hb hc hd (mul_right_cancel₀ (mul_ne_zero ha ha) h)]
-#align mul_salem_spencer.mul_right₀ MulSalemSpencer.mul_right₀
+#noalign mul_salem_spencer.mul_right₀.mul_right₀
 
-theorem mulSalemSpencer_mul_left_iff₀ (ha : a ≠ 0) :
-    MulSalemSpencer ((a * ·) '' s) ↔ MulSalemSpencer s :=
-  ⟨fun hs b c d hb hc hd h =>
+theorem mulSalemSpencer_smul_set₀ (ha : a ≠ 0) : MulSalemSpencer (a • s) ↔ MulSalemSpencer s :=
+  ⟨fun hs b hb c hc d hd h ↦
     mul_left_cancel₀ ha
       (hs (Set.mem_image_of_mem _ hb) (Set.mem_image_of_mem _ hc) (Set.mem_image_of_mem _ hd) <| by
-        rw [mul_mul_mul_comm, h, mul_mul_mul_comm]),
-    fun hs => hs.mul_left₀ ha⟩
-#align mul_salem_spencer_mul_left_iff₀ mulSalemSpencer_mul_left_iff₀
+        rw [smul_eq_mul, smul_eq_mul, mul_mul_mul_comm, h, mul_mul_mul_comm]),
+    fun hs => hs.smul_set₀ ha⟩
+#align mul_salem_spencer_mul_left_iff₀ mulSalemSpencer_smul_set₀
 
-theorem mulSalemSpencer_mul_right_iff₀ (ha : a ≠ 0) :
-    MulSalemSpencer ((· * a) '' s) ↔ MulSalemSpencer s :=
-  ⟨fun hs b c d hb hc hd h =>
-    mul_right_cancel₀ ha
-      (hs (Set.mem_image_of_mem _ hb) (Set.mem_image_of_mem _ hc) (Set.mem_image_of_mem _ hd) <| by
-        rw [mul_mul_mul_comm, h, mul_mul_mul_comm]),
-    fun hs => hs.mul_right₀ ha⟩
-#align mul_salem_spencer_mul_right_iff₀ mulSalemSpencer_mul_right_iff₀
+#noalign mul_salem_spencer_mul_right_iff₀
 
 end CancelCommMonoidWithZero
 
 section Nat
 
 theorem addSalemSpencer_iff_eq_right {s : Set ℕ} :
-    AddSalemSpencer s ↔ ∀ ⦃a b c⦄, a ∈ s → b ∈ s → c ∈ s → a + b = c + c → a = c := by
-  refine' forall₄_congr fun a b c _ => forall₃_congr fun _ _ habc => ⟨_, _⟩
+    AddSalemSpencer s ↔ ∀ ⦃a⦄, a ∈ s → ∀ ⦃b⦄, b ∈ s → ∀ ⦃c⦄, c ∈ s → a + c = b + b → a = c := by
+  refine' forall₄_congr fun a _ha b hb => forall₃_congr fun c hc habc => ⟨_, _⟩
+  · rintro rfl
+    exact (add_left_cancel habc).symm
   · rintro rfl
     simp_rw [← two_mul] at habc
     exact mul_left_cancel₀ two_ne_zero habc
-  · rintro rfl
-    exact (add_left_cancel habc).symm
 #align add_salem_spencer_iff_eq_right addSalemSpencer_iff_eq_right
 
 end Nat
@@ -285,12 +262,15 @@ convex set does not contain lines. -/
 theorem addSalemSpencer_frontier [LinearOrderedField 𝕜] [TopologicalSpace E] [AddCommMonoid E]
     [Module 𝕜 E] {s : Set E} (hs₀ : IsClosed s) (hs₁ : StrictConvex 𝕜 s) :
     AddSalemSpencer (frontier s) := by
-  intro a b c ha hb hc habc
-  obtain rfl : (1 / 2 : 𝕜) • a + (1 / 2 : 𝕜) • b = c := by
+  intro a ha b hb c hc habc
+  obtain rfl : (1 / 2 : 𝕜) • a + (1 / 2 : 𝕜) • c = b := by
     rwa [← smul_add, one_div, inv_smul_eq_iff₀ (show (2 : 𝕜) ≠ 0 by norm_num), two_smul]
-  exact
-    hs₁.eq (hs₀.frontier_subset ha) (hs₀.frontier_subset hb) one_half_pos one_half_pos
-      (add_halves _) hc.2
+  have :=
+    hs₁.eq (hs₀.frontier_subset ha) (hs₀.frontier_subset hc) one_half_pos one_half_pos
+      (add_halves _) hb.2
+  simp [this, ← add_smul]
+  ring_nf
+  simp
 #align add_salem_spencer_frontier addSalemSpencer_frontier
 
 theorem addSalemSpencer_sphere [NormedAddCommGroup E] [NormedSpace ℝ E] [StrictConvexSpace ℝ E]
@@ -351,11 +331,11 @@ theorem MulSalemSpencer.le_mulRothNumber (hs : MulSalemSpencer (s : Set α)) (h 
 #align add_salem_spencer.le_add_roth_number AddSalemSpencer.le_addRothNumber
 
 @[to_additive]
-theorem MulSalemSpencer.roth_number_eq (hs : MulSalemSpencer (s : Set α)) :
+theorem MulSalemSpencer.mulRothNumber_eq (hs : MulSalemSpencer (s : Set α)) :
     mulRothNumber s = s.card :=
   (mulRothNumber_le _).antisymm <| hs.le_mulRothNumber <| Subset.refl _
-#align mul_salem_spencer.roth_number_eq MulSalemSpencer.roth_number_eq
-#align add_salem_spencer.roth_number_eq AddSalemSpencer.roth_number_eq
+#align mul_salem_spencer.roth_number_eq MulSalemSpencer.mulRothNumber_eq
+#align add_salem_spencer.roth_number_eq AddSalemSpencer.addRothNumber_eq
 
 @[to_additive (attr := simp)]
 theorem mulRothNumber_empty : mulRothNumber (∅ : Finset α) = 0 :=
@@ -365,7 +345,7 @@ theorem mulRothNumber_empty : mulRothNumber (∅ : Finset α) = 0 :=
 
 @[to_additive (attr := simp)]
 theorem mulRothNumber_singleton (a : α) : mulRothNumber ({a} : Finset α) = 1 := by
-  refine' MulSalemSpencer.roth_number_eq _
+  refine' MulSalemSpencer.mulRothNumber_eq _
   rw [coe_singleton]
   exact mulSalemSpencer_singleton a
 #align mul_roth_number_singleton mulRothNumber_singleton
@@ -411,6 +391,38 @@ theorem mulRothNumber_lt_of_forall_not_mulSalemSpencer
 
 end Monoid
 
+section CommMonoid
+variable [CommMonoid α] [CommMonoid β] [DecidableEq β] {A : Finset α} {B : Finset β} {f : α → β}
+
+/-- Arithmetic progressions can be pushed forward along bijective 2-Freiman homs. -/
+@[to_additive]
+lemma IsMulFreimanHom.mulRothNumber_mono (hf : IsMulFreimanHom 2 A B f) (hf' : Set.BijOn f A B) :
+    mulRothNumber B ≤ mulRothNumber A := by
+  obtain ⟨s, hsB, hcard, hs⟩ := mulRothNumber_spec B
+  have hsA : invFunOn f A '' s ⊆ A :=
+    (hf'.surjOn.mapsTo_invFunOn.mono (coe_subset.2 hsB) Subset.rfl).image_subset
+  have hfsA : Set.SurjOn f A s := hf'.surjOn.mono Subset.rfl (coe_subset.2 hsB)
+  rw [← hcard, ← s.card_image_of_injOn ((invFunOn_injOn_image f _).mono hfsA)]
+  refine MulSalemSpencer.le_mulRothNumber ?_ (mod_cast hsA)
+  simpa using (hf.subset hsA hfsA.bijOn_subset.mapsTo).mulSalemSpencer (hf'.injOn.mono hsA) hs
+
+/-- Arithmetic progressions are preserved under 2-Freiman isos. -/
+@[to_additive]
+lemma IsMulFreimanIso.mulRothNumber_congr (hf : IsMulFreimanIso 2 A B f) :
+    mulRothNumber A = mulRothNumber B := by
+  refine le_antisymm ?_ (hf.isMulFreimanHom.mulRothNumber_mono hf.bijOn)
+  obtain ⟨s, hsA, hcard, hs⟩ := mulRothNumber_spec A
+  rw [← coe_subset] at hsA
+  have hfs : Set.InjOn f s := hf.bijOn.injOn.mono hsA
+  have := (hf.subset hsA hfs.bijOn_image).mulSalemSpencer_congr.1 hs
+  rw [← coe_image] at this
+  rw [← hcard, ← Finset.card_image_of_injOn hfs]
+  refine this.le_mulRothNumber ?_
+  rw [← coe_subset, coe_image]
+  exact (hf.bijOn.mapsTo.mono hsA Subset.rfl).image_subset
+
+end CommMonoid
+
 section CancelCommMonoid
 
 variable [CancelCommMonoid α] (s : Finset α) (a : α)
@@ -424,11 +436,11 @@ theorem mulRothNumber_map_mul_left :
     obtain ⟨u, hus, rfl⟩ := hus
     rw [coe_map] at hu
     rw [← hcard, card_map]
-    exact (mulSalemSpencer_mul_left_iff.1 hu).le_mulRothNumber hus
+    exact (mulSalemSpencer_smul_set.1 hu).le_mulRothNumber hus
   · obtain ⟨u, hus, hcard, hu⟩ := mulRothNumber_spec s
     have h : MulSalemSpencer (u.map <| mulLeftEmbedding a : Set α) := by
       rw [coe_map]
-      exact hu.mul_left
+      exact hu.smul_set
     convert h.le_mulRothNumber (map_subset_map.2 hus) using 1
     rw [card_map, hcard]
 #align mul_roth_number_map_mul_left mulRothNumber_map_mul_left
@@ -517,5 +529,19 @@ theorem rothNumberNat_isBigO_id : (fun N => (rothNumberNat N : ℝ)) =O[atTop] f
   rothNumberNat_isBigOWith_id.isBigO
 set_option linter.uppercaseLean3 false in
 #align roth_number_nat_is_O_id rothNumberNat_isBigO_id
+
+lemma Fin.addRothNumber_eq_rothNumberNat (hkn : 2 * k ≤ n) :
+    addRothNumber (Iio k : Finset (Fin n.succ)) = rothNumberNat k :=
+  IsAddFreimanIso.addRothNumber_congr $ mod_cast isAddFreimanIso_Iio two_ne_zero hkn
+
+lemma Fin.addRothNumber_le_rothNumberNat (k n : ℕ) (hkn : k ≤ n) :
+    addRothNumber (Iio k : Finset (Fin n.succ)) ≤ rothNumberNat k := by
+  suffices h : Set.BijOn (Nat.cast : ℕ → Fin n.succ) (range k) (Iio k : Finset (Fin n.succ)) by
+    exact (AddMonoidHomClass.isAddFreimanHom (Nat.castRingHom _) h.mapsTo).addRothNumber_mono h
+  refine ⟨?_, (CharP.natCast_injOn_Iio _ n.succ).mono (by simp; omega), ?_⟩
+  · simpa using fun x ↦ cast_strictMono hkn
+  simp only [Set.SurjOn, coe_Iio, Set.subset_def, Set.mem_Iio, Set.mem_image, lt_iff_val_lt_val,
+    val_cast_of_lt, Nat.lt_succ_iff.2 hkn, coe_range]
+  exact fun x hx ↦ ⟨x, hx, by simp⟩
 
 end rothNumberNat

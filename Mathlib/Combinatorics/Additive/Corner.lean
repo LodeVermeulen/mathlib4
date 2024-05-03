@@ -19,14 +19,94 @@ This file proves the corners theorem and Roth's theorem.
 * [Wikipedia, *Corners theorem*](https://en.wikipedia.org/wiki/Corners_theorem)
 -/
 
+namespace Finset
+variable {α β : Type*} {s : Finset α} {t : Finset β}
+
+/-- Reorder a finset.
+
+The difference with `Finset.card_bij'` is that the bijection is specified as a surjective injection,
+rather than by an inverse function.
+
+The difference with `Finset.card_nbij` is that the bijection is allowed to use membership of the
+domain, rather than being a non-dependent function. -/
+lemma card_bij (i : ∀ a ∈ s, β) (hi : ∀ a ha, i a ha ∈ t)
+    (i_inj : ∀ a₁ ha₁ a₂ ha₂, i a₁ ha₁ = i a₂ ha₂ → a₁ = a₂)
+    (i_surj : ∀ b ∈ t, ∃ a ha, i a ha = b) : s.card = t.card := by
+  classical
+  calc
+    s.card = s.attach.card := card_attach.symm
+    _      = (s.attach.image fun a : { a // a ∈ s } => i a.1 a.2).card := Eq.symm ?_
+    _      = t.card := ?_
+  · apply card_image_of_injective
+    intro ⟨_, _⟩ ⟨_, _⟩ h
+    simpa using i_inj _ _ _ _ h
+  · congr 1
+    ext b
+    constructor <;> intro h
+    · obtain ⟨_, _, rfl⟩ := mem_image.1 h; apply hi
+    · obtain ⟨a, ha, rfl⟩ := i_surj b h; exact mem_image.2 ⟨⟨a, ha⟩, by simp⟩
+
+/-- Reorder a finset.
+
+The difference with `Finset.card_bij` is that the bijection is specified with an inverse, rather
+than as a surjective injection.
+
+The difference with `Finset.card_nbij'` is that the bijection and its inverse are allowed to use
+membership of the domains, rather than being non-dependent functions. -/
+lemma card_bij' (i : ∀ a ∈ s, β) (j : ∀ a ∈ t, α) (hi : ∀ a ha, i a ha ∈ t)
+    (hj : ∀ a ha, j a ha ∈ s) (left_inv : ∀ a ha, j (i a ha) (hi a ha) = a)
+    (right_inv : ∀ a ha, i (j a ha) (hj a ha) = a) : s.card = t.card := by
+  refine card_bij i hi (fun a1 h1 a2 h2 eq ↦ ?_) (fun b hb ↦ ⟨_, hj b hb, right_inv b hb⟩)
+  rw [← left_inv a1 h1, ← left_inv a2 h2]
+  simp only [eq]
+
+/-- Reorder a finset.
+
+The difference with `Finset.card_nbij'` is that the bijection is specified as a surjective
+injection, rather than by an inverse function.
+
+The difference with `Finset.card_bij` is that the bijection is a non-dependent function, rather than
+being allowed to use membership of the domain. -/
+lemma card_nbij (i : α → β) (hi : ∀ a ∈ s, i a ∈ t) (i_inj : (s : Set α).InjOn i)
+    (i_surj : (s : Set α).SurjOn i t) : s.card = t.card :=
+  card_bij (fun a _ ↦ i a) hi i_inj (by simpa using i_surj)
+
+/-- Reorder a finset.
+
+The difference with `Finset.card_nbij` is that the bijection is specified with an inverse, rather
+than as a surjective injection.
+
+The difference with `Finset.card_bij'` is that the bijection and its inverse are non-dependent
+functions, rather than being allowed to use membership of the domains.
+
+The difference with `Finset.card_equiv` is that bijectivity is only required to hold on the domains,
+rather than on the entire types. -/
+lemma card_nbij' (i : α → β) (j : β → α) (hi : ∀ a ∈ s, i a ∈ t) (hj : ∀ a ∈ t, j a ∈ s)
+    (left_inv : ∀ a ∈ s, j (i a) = a) (right_inv : ∀ a ∈ t, i (j a) = a) : s.card = t.card :=
+  card_bij' (fun a _ ↦ i a) (fun b _ ↦ j b) hi hj left_inv right_inv
+
+/-- Specialization of `Finset.card_nbij'` that automatically fills in most arguments.
+
+See `Fintype.card_equiv` for the version where `s` and `t` are `univ`. -/
+lemma card_equiv (e : α ≃ β) (hst : ∀ i, i ∈ s ↔ e i ∈ t) : s.card = t.card := by
+  refine card_nbij' e e.symm ?_ ?_ ?_ ?_ <;> simp [hst]
+
+/-- Specialization of `Finset.card_bij` that automatically fills in most arguments.
+
+See `Fintype.card_bijective` for the version where `s` and `t` are `univ`. -/
+lemma card_bijective (e : α → β) (he : e.Bijective) (hst : ∀ i, i ∈ s ↔ e i ∈ t) :
+    s.card = t.card := card_equiv (.ofBijective e he) hst
+
+end Finset
+
 open Finset SimpleGraph SimpleGraph.TripartiteFromTriangles Sum Sum3
 open Function hiding graph
 open Fintype (card)
 
-variable {G : Type*}
+variable {G H : Type*}
 
 section AddCommMonoid
-variable [AddCommMonoid G] {s t : Finset (G × G)} {a b c d x y : G}
+variable [AddCommMonoid G] [AddCommMonoid H] {s t : Finset (G × G)} {a b c d x y : G}
 
 /-- A **corner** of a set `s` in an abelian group is a triple of points of the form
 `(x, y), (x + d, y), (x, y + d)`. It is **nontrivial** if `d ≠ 0`. -/
@@ -44,6 +124,24 @@ lemma IsCornerFree.mono (hst : s ⊆ t) (ht : IsCornerFree t) : IsCornerFree s :
 
 @[simp] lemma not_isCorner_empty : ¬ IsCorner ∅ x y d := by simp [IsCorner]
 @[simp] lemma isCornerFree_empty : IsCornerFree (∅ : Finset (G × G)) := by simp [IsCornerFree]
+
+/-- Corners are preserved under `2`-Freiman homomorphisms. --/
+lemma IsAddFreimanHom.mulSalemSpencer (hf : IsAddFreimanHom 2 s t f) (hf' : s.InjOn f)
+    (ht : MulSalemSpencer t) : MulSalemSpencer s :=
+  fun _ ha _ hb _ hc habc ↦ hf' ha hb <| ht (hf.mapsTo ha) (hf.mapsTo hb) (hf.mapsTo hc) <|
+    hf.mul_eq_mul ha hc hb hb habc
+
+/-- Corners are preserved under `2`-Freiman isomorphisms. --/
+lemma IsMulFreimanIso.mulSalemSpencer_congr (hf : IsMulFreimanIso 2 s t f) :
+    MulSalemSpencer s ↔ MulSalemSpencer t where
+  mpr := hf.isMulFreimanHom.mulSalemSpencer hf.bijOn.injOn
+  mp hs a hfa b hfb c hfc habc := by
+    obtain ⟨a, ha, rfl⟩ := hf.bijOn.surjOn hfa
+    obtain ⟨b, hb, rfl⟩ := hf.bijOn.surjOn hfb
+    obtain ⟨c, hc, rfl⟩ := hf.bijOn.surjOn hfc
+    exact congr_arg f $ hs ha hb hc $ (hf.mul_eq_mul ha hc hb hb).1 habc
+
+end CommMonoid
 
 end AddCommMonoid
 
@@ -90,8 +188,9 @@ end Corners
 
 open Corners
 
-/-- The **corners theorem** for finite abelian groups. The density of a corner-free set in `G × G`
-goes to zero as `|G|` tends to infinity. -/
+/-- The **corners theorem** for finite abelian groups.
+
+The maximum density of a corner-free set in `G × G` goes to zero as `|G|` tends to infinity. -/
 theorem corners_theorem {ε : ℝ} (hε : 0 < ε) :
     ∃ n₀ : ℕ, ∀ G, [AddCommGroup G] → [Fintype G] → n₀ ≤ card G → ∀ s : Finset (G × G),
       ε * card G ^ 2 ≤ s.card → ¬ IsCornerFree s := by
@@ -112,43 +211,14 @@ theorem corners_theorem {ε : ℝ} (hε : 0 < ε) :
   · have : ε / 9 ≤ 1 := by linarith
     positivity
 
-lemma alt_set (c : ℕ × ℕ) (s : Finset (ℕ × ℕ)) :
-    (s.filter fun (x, y) ↦ x ≤ c.1 ∧ y ≤ c.2 ∧ (c.1 - x, c.2 - y) ∈ s).card =
-      ((s ×ˢ s).filter fun ((x₁, y₁), x₂, y₂) ↦ (x₁ + x₂, y₁ + y₂) = c).card := by
-  rcases c with ⟨c₁, c₂⟩
-  refine (card_congr (fun (a, _) _ ↦ a) ?_ ?_ ?_).symm
-  · rintro ⟨⟨a₁, a₂⟩, b₁, b₂⟩ i
-    dsimp
-    simp only [mem_filter, mem_product, Prod.mk.inj_iff] at i
-    simp only [mem_filter]
-    rw [← i.2.1, ← i.2.2]
-    simpa using i.1
-  · aesop
-  simp only [and_imp, exists_prop, Prod.forall, mem_filter, exists_and_right, Prod.mk.inj_iff,
-    exists_eq_right_right, exists_eq_right, Prod.exists, mem_product]
-  refine (fun x y xy hx hy t ↦ ⟨_, _, ⟨xy, t⟩, ?_, ?_⟩) <;>
-    rw [← Nat.add_sub_assoc, Nat.add_sub_cancel_left] <;> assumption
+/-- The **corners theorem** for `ℕ`.
 
-lemma correlate {n : ℕ} (hn : 0 < n) (s : Finset (ℕ × ℕ)) (hA : s ⊆ range n ×ˢ range n) :
-    ∃ c ∈ range (n + n) ×ˢ range (n + n),
-      (s.card : ℝ)^2 / (n + n)^2 ≤
-        (s.filter fun (x, y) ↦ x ≤ c.1 ∧ y ≤ c.2 ∧ (c.1 - x, c.2 - y) ∈ s).card := by
-  simp_rw [alt_set _ s]
-  let f : (ℕ × ℕ) × ℕ × ℕ → ℕ × ℕ := fun ((a, b), c, d) ↦ (a + c, b + d)
-  have : ∀ a ∈ s ×ˢ s, f a ∈ range (n + n) ×ˢ range (n + n) := by
-    simp only [subset_iff, mem_range, mem_product, two_mul] at hA ⊢
-    exact fun a ha ↦ ⟨add_lt_add (hA ha.1).1 (hA ha.2).1, add_lt_add (hA ha.1).2 (hA ha.2).2⟩
-  refine exists_le_card_fiber_of_nsmul_le_card_of_maps_to this ?_ ?_
-  { simp [hn.ne'] }
-  simp only [card_product, card_range, nsmul_eq_mul, Nat.cast_pow, Nat.cast_add, ← sq]
-  rw [mul_div_assoc', mul_div_cancel_left₀]
-  simp [hn.ne']
-
-lemma corners_theorem (hε : 0 < ε) :
-    ∃ n₀ : ℕ, ∀ n, n₀ ≤ n → ∀ s ⊆ range n ×ˢ range n, ε * n^2 ≤ s.card →
-      ∃ x y d : ℕ, d ≠ 0 ∧ IsCorner s x y d := by
-  obtain ⟨n₀, hn₀⟩ := weak_corners_theorem (by positivity : 0 < (ε / 2) ^ 2)
-  refine ⟨n₀ + 1, fun n hn s hA hAcard ↦ ?_⟩
+The maximum density of a corner-free set in `{1, ..., n} × {1, ..., n}` goes to zero as `n` tends to
+infinity. -/
+lemma corners_theorem_nat (hε : 0 < ε) :
+    ∃ n₀ : ℕ, ∀ n, n₀ ≤ n → ∀ A ⊆ range n ×ˢ range n, ε * n ^ 2 ≤ A.card → ¬ IsCornerFree A := by
+  obtain ⟨n₀, hn₀⟩ := corners_theorem (by positivity : 0 < (ε / 2) ^ 2)
+  refine ⟨n₀, fun n hn s hAn hAε hA ↦ ?_⟩
   obtain ⟨⟨c₁, c₂⟩, -, hA'card⟩ := correlate (Nat.succ_pos'.trans_le hn) s hA
   let A' : Finset (G × G) :=
     univ.filter fun (x, y) ↦ (↑x, ↑y) ∈ s ∧ ↑x ≤ c₁ ∧ ↑y ≤ c₂ ∧ (c₁ - x, c₂ - y) ∈ s
@@ -184,10 +254,35 @@ lemma corners_theorem (hε : 0 < ε) :
   refine ⟨c₁ - e₁, c₂ - b₂, _, Nat.cast_ne_zero.1 $ neg_ne_zero.1 hd, mem_image.2 ⟨_, hac, ?_⟩,
     mem_image.2 ⟨_, hbc, ?_⟩, mem_image.2 ⟨_, hec, ?_⟩⟩ <;> simp [*, sub_add, ← sub_eq_add_neg]
 
-lemma roth (δ : ℝ) (hδ : 0 < δ) :
-    ∃ n₀ : ℕ, ∀ n, n₀ ≤ n →
-      ∀ s ⊆ range n, δ * n ≤ s.card → ∃ a d, 0 < d ∧ a ∈ s ∧ a + d ∈ s ∧ a + 2 * d ∈ s := by
-  obtain ⟨n₀, hn₀⟩ := corners_theorem (by positivity : 0 < δ/4)
+/-- **Roth's theorem** for finite abelian groups.
+
+The maximum density of a 3AP-free set in `G` goes to zero as `|G|` tends to infinity. -/
+lemma roth (ε : ℝ) (hε : 0 < ε) :
+    ∃ n₀ : ℕ, ∀ G, [AddCommGroup G] → [Fintype G] → n₀ ≤ card G → ∀ A : Finset G,
+      ε * card G ≤ A.card → ¬ AddSalemSpencer (A : Set G) := by
+  obtain ⟨n₀, hn₀⟩ := corners_theorem hε
+  refine ⟨n₀, fun G _ _ hG A hAcard hA ↦ ?_⟩
+  classical
+  let B : Finset (G × G) := univ.filter fun (x, y) ↦ y - x ∈ A
+  have : ε * card G ^ 2 ≤ B.card := by
+    calc
+      _ = card G * (ε * card G) := by ring
+      _ ≤ card G * A.card := by gcongr
+      _ = B.card := ?_
+    norm_cast
+    rw [← card_univ, ← card_product]
+    exact card_equiv ((Equiv.refl _).prodShear fun a ↦ Equiv.addLeft a) (by simp [B])
+  obtain ⟨x, y, d, h₂, h₁, h₃, hd⟩ :
+      ∃ x y d, y - x ∈ A ∧ y - (x + d) ∈ A ∧ y + d - x ∈ A ∧ d ≠ 0 := by
+    simpa [IsCornerFree, IsCorner, B, -exists_and_left] using hn₀ _ hG B this
+  exact hd $ by simpa using hA h₁ h₂ h₃ (by abel)
+
+/-- **Roth's theorem** for `ℕ`.
+
+The maximum density of a 3AP-free set in `{1, ..., n}` goes to zero as `n` tends to infinity. -/
+lemma roth_nat (ε : ℝ) (hε : 0 < ε) :
+    ∃ n₀ : ℕ, ∀ n, n₀ ≤ n → ∀ s ⊆ range n, ε * n ≤ s.card → ¬ AddSalemSpencer (s : Set ℕ) := by
+  obtain ⟨n₀, hn₀⟩ := corners_theorem (by positivity : 0 < ε / 4)
   refine ⟨n₀, fun n hn s hA hAcard ↦ ?_⟩
   let B : Finset (ℕ × ℕ) :=
     (range (n + n) ×ˢ range (n + n)).filter fun (x, y) ↦ x ≤ y ∧ y - x ∈ s
@@ -219,6 +314,38 @@ lemma roth (δ : ℝ) (hδ : 0 < δ) :
     exact (mem_filter.1 xy).2.2 }
   { rw [← Nat.sub_add_comm (mem_filter.1 xky).2.1, two_mul, ← add_assoc, Nat.add_sub_add_right]
     exact (mem_filter.1 xyk).2.2 }
+
+lemma alt_set (c : ℕ × ℕ) (s : Finset (ℕ × ℕ)) :
+    (s.filter fun (x, y) ↦ x ≤ c.1 ∧ y ≤ c.2 ∧ (c.1 - x, c.2 - y) ∈ s).card =
+      ((s ×ˢ s).filter fun ((x₁, y₁), x₂, y₂) ↦ (x₁ + x₂, y₁ + y₂) = c).card := by
+  rcases c with ⟨c₁, c₂⟩
+  refine (card_congr (fun (a, _) _ ↦ a) ?_ ?_ ?_).symm
+  · rintro ⟨⟨a₁, a₂⟩, b₁, b₂⟩ i
+    dsimp
+    simp only [mem_filter, mem_product, Prod.mk.inj_iff] at i
+    simp only [mem_filter]
+    rw [← i.2.1, ← i.2.2]
+    simpa using i.1
+  · aesop
+  simp only [and_imp, exists_prop, Prod.forall, mem_filter, exists_and_right, Prod.mk.inj_iff,
+    exists_eq_right_right, exists_eq_right, Prod.exists, mem_product]
+  refine (fun x y xy hx hy t ↦ ⟨_, _, ⟨xy, t⟩, ?_, ?_⟩) <;>
+    rw [← Nat.add_sub_assoc, Nat.add_sub_cancel_left] <;> assumption
+
+lemma correlate {n : ℕ} (hn : 0 < n) (s : Finset (ℕ × ℕ)) (hA : s ⊆ range n ×ˢ range n) :
+    ∃ c ∈ range (n + n) ×ˢ range (n + n),
+      (s.card : ℝ)^2 / (n + n)^2 ≤
+        (s.filter fun (x, y) ↦ x ≤ c.1 ∧ y ≤ c.2 ∧ (c.1 - x, c.2 - y) ∈ s).card := by
+  simp_rw [alt_set _ s]
+  let f : (ℕ × ℕ) × ℕ × ℕ → ℕ × ℕ := fun ((a, b), c, d) ↦ (a + c, b + d)
+  have : ∀ a ∈ s ×ˢ s, f a ∈ range (n + n) ×ˢ range (n + n) := by
+    simp only [subset_iff, mem_range, mem_product, two_mul] at hA ⊢
+    exact fun a ha ↦ ⟨add_lt_add (hA ha.1).1 (hA ha.2).1, add_lt_add (hA ha.1).2 (hA ha.2).2⟩
+  refine exists_le_card_fiber_of_nsmul_le_card_of_maps_to this ?_ ?_
+  { simp [hn.ne'] }
+  simp only [card_product, card_range, nsmul_eq_mul, Nat.cast_pow, Nat.cast_add, ← sq]
+  rw [mul_div_assoc', mul_div_cancel_left₀]
+  simp [hn.ne']
 
 lemma roth' (δ : ℝ) (hδ : 0 < δ) :
     ∃ n₀ : ℕ, ∀ n, n₀ ≤ n → ∀ s ⊆ range n, δ * n ≤ s.card → ¬ AddSalemSpencer (s : Set ℕ) := by
