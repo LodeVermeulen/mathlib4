@@ -19,46 +19,49 @@ This file proves the corners theorem and Roth's theorem.
 * [Wikipedia, *Corners theorem*](https://en.wikipedia.org/wiki/Corners_theorem)
 -/
 
-section LinearOrderedSemifield
-variable {α : Type*} [LinearOrderedSemifield α] {a b c : α}
-
-end LinearOrderedSemifield
-
-attribute [simp] Fin.val_eq_val
-
 open Finset SimpleGraph SimpleGraph.TripartiteFromTriangles Sum Sum3
 open Function hiding graph
+open Fintype (card)
 
-variable {n : ℕ} {ε : ℝ}
+variable {G : Type*}
 
-/-- A corner in `s` is three points of the form `(x, y), (x + h, y), (x, y + h)`. A corner is
-nontrivial if `h ≠ 0`. A corner with `h ≤ 0` is called an anticorner. Here, we record `x`, `y`, `d`.
--/
-def IsCorner (s : Finset (ℤ × ℤ)) : ℤ → ℤ → ℤ → Prop :=
+section AddCommMonoid
+variable [AddCommMonoid G] {s t : Finset (G × G)} {a b c d x y : G}
+
+/-- A **corner** of a set `s` in an abelian group is a triple of points of the form
+`(x, y), (x + d, y), (x, y + d)`. It is **nontrivial** if `d ≠ 0`. -/
+def IsCorner (s : Finset (G × G)) : G → G → G → Prop :=
   fun x y d ↦ (x, y) ∈ s ∧ (x + d, y) ∈ s ∧ (x, y + d) ∈ s
 
-lemma IsCorner.mono {s t : Finset (ℤ × ℤ)} (hst : s ⊆ t) {x y d : ℤ} (h : IsCorner s x y d) :
-    IsCorner t x y d :=
-  ⟨hst h.1, hst h.2.1, hst h.2.2⟩
+/-- A **corner-free set** in an abelian group is a set containing no non-trivial corner. -/
+def IsCornerFree (s : Finset (G × G)) : Prop := ∀ ⦃x y d⦄, IsCorner s x y d → d = 0
+
+lemma IsCorner.mono (hst : s ⊆ t) (hs : IsCorner s x y d) : IsCorner t x y d :=
+  ⟨hst hs.1, hst hs.2.1, hst hs.2.2⟩
+
+lemma IsCornerFree.mono (hst : s ⊆ t) (ht : IsCornerFree t) : IsCornerFree s :=
+  fun _x _y _d hxyd ↦ ht $ hxyd.mono hst
+
+@[simp] lemma not_isCorner_empty : ¬ IsCorner ∅ x y d := by simp [IsCorner]
+@[simp] lemma isCornerFree_empty : IsCornerFree (∅ : Finset (G × G)) := by simp [IsCornerFree]
+
+end AddCommMonoid
+
+variable [AddCommGroup G] [Fintype G] [DecidableEq G] {s t : Finset (G × G)}
+  {a b c d x y : G} {n : ℕ} {ε : ℝ}
 
 namespace Corners
-variable {s : Finset (Fin n × Fin n)} {x : Fin n × Fin n × Fin (n + n)}
 
 /-- The triangle indices for the proof of the corners theorem construction. -/
-private def triangleIndices (s : Finset (Fin n × Fin n)) : Finset (Fin n × Fin n × Fin (n + n)) :=
-  s.map ⟨fun ab ↦ (ab.1, ab.2, ⟨ab.1.val + ab.2.val, add_lt_add ab.1.2 ab.2.2⟩), by
-    rintro ⟨x₁, x₂⟩ ⟨y₁, y₂⟩ ⟨⟩; rfl⟩
+private def triangleIndices (s : Finset (G × G)) : Finset (G × G × G) :=
+  s.map ⟨fun (a, b) ↦ (a, b, a + b), by rintro ⟨x₁, x₂⟩ ⟨y₁, y₂⟩ ⟨⟩; rfl⟩
 
-@[simp] lemma mem_triangleIndices :
-  x ∈ triangleIndices s ↔ (x.1, x.2.1) ∈ s ∧ x.2.2 = ⟨_, add_lt_add x.1.2 x.2.1.2⟩ := by
+@[simp] lemma mk_mem_triangleIndices : (a, b, c) ∈ triangleIndices s ↔ (a, b) ∈ s ∧ c = a + b := by
   simp only [triangleIndices, Prod.ext_iff, mem_map, Embedding.coeFn_mk, exists_prop, Prod.exists,
     eq_comm]
   refine ⟨?_, fun h ↦ ⟨_, _, h.1, rfl, rfl, h.2⟩⟩
   rintro ⟨_, _, h₁, rfl, rfl, h₂⟩
   exact ⟨h₁, h₂⟩
-
-lemma mk_mem_triangleIndices {a b : Fin n} {c : Fin (n + n)} :
-    (a, b, c) ∈ triangleIndices s ↔ (a, b) ∈ s ∧ c = ⟨_, add_lt_add a.2 b.2⟩ := mem_triangleIndices
 
 @[simp] lemma card_triangleIndices : (triangleIndices s).card = s.card := card_map _
 
@@ -67,57 +70,51 @@ instance triangleIndices.instExplicitDisjoint : ExplicitDisjoint (triangleIndice
   all_goals
     simp only [mk_mem_triangleIndices, Prod.mk.inj_iff, exists_prop, forall_exists_index, and_imp]
     rintro a b _ a' - rfl - h'
-    simp [*] at * <;> assumption
+    simp [Fin.val_eq_val, *] at * <;> assumption
 
-lemma noAccidental (h : ∀ (x y : ℕ) d, IsCorner (s.image $ Prod.map (↑) (↑)) x y d → d = 0) :
-    NoAccidental (triangleIndices s) where
+lemma noAccidental (hs : IsCornerFree s) : NoAccidental (triangleIndices s) where
   wow a a' b b' c c' ha hb hc := by
-    simp only [mem_triangleIndices] at ha hb hc
-    refine .inl $ .symm $ Fin.ext $ Nat.cast_injective $ sub_eq_zero.1 $ h a b _
-      ⟨mem_image_of_mem _ hc.1, ?_, ?_⟩
-    · simpa only [add_sub_cancel] using mem_image_of_mem _ ha.1
-    rw [ha.2, Fin.mk_eq_mk] at hb
-    convert mem_image_of_mem _ hb.1
-    simpa [Prod.ext_iff, ← add_sub_right_comm, sub_eq_iff_eq_add, add_comm]
-      using congr_arg Int.ofNat hb.2
+    simp only [mk_mem_triangleIndices] at ha hb hc
+    refine .inl $ .symm $ sub_eq_zero.1 $ hs ⟨hc.1, by simpa [add_sub_cancel] using ha.1, ?_⟩
+    convert hb.1
+    simpa [← add_sub_assoc, sub_eq_iff_eq_add, add_comm, ha.2] using hb.2
 
-lemma farFromTriangleFree_graph (hε : ε * n ^ 2 ≤ s.card) :
-  (graph $ triangleIndices s).FarFromTriangleFree (ε / 16) := by
+lemma farFromTriangleFree_graph (hε : ε * card G ^ 2 ≤ s.card) :
+    (graph $ triangleIndices s).FarFromTriangleFree (ε / 9) := by
   refine farFromTriangleFree _ ?_
-  simp_rw [card_triangleIndices, Fintype.card_fin, mul_comm_div, Nat.cast_pow, Nat.cast_add]
+  simp_rw [card_triangleIndices, mul_comm_div, Nat.cast_pow, Nat.cast_add]
   ring_nf
   simpa only [mul_comm] using hε
-
-lemma weak_corners_theorem {ε : ℝ} (hε : 0 < ε) :
-  ∃ n₀ : ℕ, ∀ n, n₀ ≤ n →
-    ∀ s : Finset (Fin n × Fin n), ε * n^2 ≤ s.card →
-      ∃ x y : ℕ, ∃ d ≠ 0, IsCorner (s.image $ Prod.map (↑) (↑)) x y d := by
-  refine ⟨⌊(triangleRemovalBound (ε / 16) * 64)⁻¹⌋₊ + 1, fun n hn s hA ↦ ?_⟩
-  rw [Nat.add_one_le_iff] at hn
-  have n_pos : 0 < n := (Nat.zero_le _).trans_lt hn
-  have hε₁ : ε ≤ 1 := by
-    have := hA.trans (Nat.cast_le.2 s.card_le_univ)
-    simp only [sq, Nat.cast_mul, Fintype.card_prod, Fintype.card_fin] at this
-    rwa [mul_le_iff_le_one_left] at this
-    exact mul_pos (Nat.cast_pos.2 n_pos) (Nat.cast_pos.2 n_pos)
-  by_contra! h
-  simp_rw [not_imp_not] at h
-  haveI := noAccidental h
-  rw [Nat.floor_lt' n_pos.ne', inv_pos_lt_iff_one_lt_mul'] at hn
-  refine hn.not_le (le_of_mul_le_mul_right ?_ $ pow_pos (Nat.cast_pos.2 n_pos) 2)
-  have h₁ := (farFromTriangleFree_graph hA).le_card_cliqueFinset
-  rw [card_triangles, card_triangleIndices] at h₁
-  convert h₁.trans (Nat.cast_le.2 $ card_le_univ _) using 1 <;> simp <;> ring
-  · have : ε / 16 ≤ 1 := by linarith
-    positivity
 
 end Corners
 
 open Corners
 
+/-- The **corners theorem** for finite abelian groups. The density of a corner-free set in `G × G`
+goes to zero as `|G|` tends to infinity. -/
+theorem corners_theorem {ε : ℝ} (hε : 0 < ε) :
+    ∃ n₀ : ℕ, ∀ G, [AddCommGroup G] → [Fintype G] → n₀ ≤ card G → ∀ s : Finset (G × G),
+      ε * card G ^ 2 ≤ s.card → ¬ IsCornerFree s := by
+  refine ⟨⌊(triangleRemovalBound (ε / 9) * 27)⁻¹⌋₊ + 1, fun G _ _ hG s hA h ↦ ?_⟩
+  rw [Nat.add_one_le_iff] at hG
+  have hε₁ : ε ≤ 1 := by
+    have := hA.trans (Nat.cast_le.2 s.card_le_univ)
+    simp only [sq, Nat.cast_mul, Fintype.card_prod, Fintype.card_fin] at this
+    rwa [mul_le_iff_le_one_left] at this
+    positivity
+  haveI := noAccidental h
+  rw [Nat.floor_lt' (by positivity), inv_pos_lt_iff_one_lt_mul'] at hG
+  refine hG.not_le (le_of_mul_le_mul_right ?_ (by positivity : (0 : ℝ) < card G ^ 2))
+  classical
+  have h₁ := (farFromTriangleFree_graph hA).le_card_cliqueFinset
+  rw [card_triangles, card_triangleIndices] at h₁
+  convert h₁.trans (Nat.cast_le.2 $ card_le_univ _) using 1 <;> simp <;> ring
+  · have : ε / 9 ≤ 1 := by linarith
+    positivity
+
 lemma alt_set (c : ℕ × ℕ) (s : Finset (ℕ × ℕ)) :
-  (s.filter fun (x, y) ↦ x ≤ c.1 ∧ y ≤ c.2 ∧ (c.1 - x, c.2 - y) ∈ s).card =
-    ((s ×ˢ s).filter fun ((x₁, y₁), x₂, y₂) ↦ (x₁ + x₂, y₁ + y₂) = c).card := by
+    (s.filter fun (x, y) ↦ x ≤ c.1 ∧ y ≤ c.2 ∧ (c.1 - x, c.2 - y) ∈ s).card =
+      ((s ×ˢ s).filter fun ((x₁, y₁), x₂, y₂) ↦ (x₁ + x₂, y₁ + y₂) = c).card := by
   rcases c with ⟨c₁, c₂⟩
   refine (card_congr (fun (a, _) _ ↦ a) ?_ ?_ ?_).symm
   · rintro ⟨⟨a₁, a₂⟩, b₁, b₂⟩ i
@@ -133,9 +130,9 @@ lemma alt_set (c : ℕ × ℕ) (s : Finset (ℕ × ℕ)) :
     rw [← Nat.add_sub_assoc, Nat.add_sub_cancel_left] <;> assumption
 
 lemma correlate {n : ℕ} (hn : 0 < n) (s : Finset (ℕ × ℕ)) (hA : s ⊆ range n ×ˢ range n) :
-  ∃ c ∈ range (n + n) ×ˢ range (n + n),
-    (s.card : ℝ)^2 / (n + n)^2 ≤
-      (s.filter fun (x, y) ↦ x ≤ c.1 ∧ y ≤ c.2 ∧ (c.1 - x, c.2 - y) ∈ s).card := by
+    ∃ c ∈ range (n + n) ×ˢ range (n + n),
+      (s.card : ℝ)^2 / (n + n)^2 ≤
+        (s.filter fun (x, y) ↦ x ≤ c.1 ∧ y ≤ c.2 ∧ (c.1 - x, c.2 - y) ∈ s).card := by
   simp_rw [alt_set _ s]
   let f : (ℕ × ℕ) × ℕ × ℕ → ℕ × ℕ := fun ((a, b), c, d) ↦ (a + c, b + d)
   have : ∀ a ∈ s ×ˢ s, f a ∈ range (n + n) ×ˢ range (n + n) := by
@@ -148,14 +145,14 @@ lemma correlate {n : ℕ} (hn : 0 < n) (s : Finset (ℕ × ℕ)) (hA : s ⊆ ran
   simp [hn.ne']
 
 lemma corners_theorem (hε : 0 < ε) :
-  ∃ n₀ : ℕ, ∀ n, n₀ ≤ n → ∀ s ⊆ range n ×ˢ range n, ε * n^2 ≤ s.card →
-    ∃ x y d : ℕ, d ≠ 0 ∧ IsCorner (s.image $ Prod.map (↑) (↑)) x y d := by
+    ∃ n₀ : ℕ, ∀ n, n₀ ≤ n → ∀ s ⊆ range n ×ˢ range n, ε * n^2 ≤ s.card →
+      ∃ x y d : ℕ, d ≠ 0 ∧ IsCorner s x y d := by
   obtain ⟨n₀, hn₀⟩ := weak_corners_theorem (by positivity : 0 < (ε / 2) ^ 2)
   refine ⟨n₀ + 1, fun n hn s hA hAcard ↦ ?_⟩
   obtain ⟨⟨c₁, c₂⟩, -, hA'card⟩ := correlate (Nat.succ_pos'.trans_le hn) s hA
-  let A' : Finset (Fin n × Fin n) :=
+  let A' : Finset (G × G) :=
     univ.filter fun (x, y) ↦ (↑x, ↑y) ∈ s ∧ ↑x ≤ c₁ ∧ ↑y ≤ c₂ ∧ (c₁ - x, c₂ - y) ∈ s
-  have hA' : A'.image (Prod.map (↑) (↑) : Fin n × Fin n → ℤ × ℤ) ⊆ s.image (Prod.map (↑) (↑)) :=
+  have hA' : A'.image (Prod.map (↑) (↑) : G × G → G × G) ⊆ s.image (Prod.map (↑) (↑)) :=
     image_subset_iff.2 fun x hx ↦ mem_image.2 ⟨x.map (↑) (↑), by exact (mem_filter.1 hx).2.1, rfl⟩
   have : (ε / 2) ^ 2 * ↑n ^ 2 ≤ A'.card := by
     refine le_trans ?_ (hA'card.trans ?_)
@@ -188,8 +185,8 @@ lemma corners_theorem (hε : 0 < ε) :
     mem_image.2 ⟨_, hbc, ?_⟩, mem_image.2 ⟨_, hec, ?_⟩⟩ <;> simp [*, sub_add, ← sub_eq_add_neg]
 
 lemma roth (δ : ℝ) (hδ : 0 < δ) :
-  ∃ n₀ : ℕ, ∀ n, n₀ ≤ n →
-    ∀ s ⊆ range n, δ * n ≤ s.card → ∃ a d, 0 < d ∧ a ∈ s ∧ a + d ∈ s ∧ a + 2 * d ∈ s := by
+    ∃ n₀ : ℕ, ∀ n, n₀ ≤ n →
+      ∀ s ⊆ range n, δ * n ≤ s.card → ∃ a d, 0 < d ∧ a ∈ s ∧ a + d ∈ s ∧ a + 2 * d ∈ s := by
   obtain ⟨n₀, hn₀⟩ := corners_theorem (by positivity : 0 < δ/4)
   refine ⟨n₀, fun n hn s hA hAcard ↦ ?_⟩
   let B : Finset (ℕ × ℕ) :=
@@ -212,7 +209,7 @@ lemma roth (δ : ℝ) (hδ : 0 < δ) :
     rw [sq, ← mul_assoc, mul_comm _ (s.card : ℝ)]
     exact mul_le_mul_of_nonneg_right hAcard (Nat.cast_nonneg _)
   obtain ⟨x, y, k, hk, xy, xky, xyk⟩ := hn₀ _ (hn.trans le_add_self) B (filter_subset _ _) this
-  have : Injective (Prod.map (↑) (↑) : ℕ × ℕ → ℤ × ℤ) :=
+  have : Injective (Prod.map (↑) (↑) : ℕ × ℕ → G × G) :=
     Nat.cast_injective.Prod_map Nat.cast_injective
   replace xy : (x, y) ∈ B := this.mem_finset_image.1 xy
   replace xky : (x + k, y) ∈ B := this.mem_finset_image.1 xky
@@ -224,7 +221,7 @@ lemma roth (δ : ℝ) (hδ : 0 < δ) :
     exact (mem_filter.1 xyk).2.2 }
 
 lemma roth' (δ : ℝ) (hδ : 0 < δ) :
-  ∃ n₀ : ℕ, ∀ n, n₀ ≤ n → ∀ s ⊆ range n, δ * n ≤ s.card → ¬ AddSalemSpencer (s : Set ℕ) := by
+    ∃ n₀ : ℕ, ∀ n, n₀ ≤ n → ∀ s ⊆ range n, δ * n ≤ s.card → ¬ AddSalemSpencer (s : Set ℕ) := by
   obtain ⟨n₀, hn₀⟩ := roth δ hδ
   refine ⟨n₀, fun n hn s hA hAcard hA' ↦ ?_⟩
   obtain ⟨a, d, hd, x, y, z⟩ := hn₀ n hn s hA hAcard
