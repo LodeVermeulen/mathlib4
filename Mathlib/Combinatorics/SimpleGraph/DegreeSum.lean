@@ -118,8 +118,8 @@ theorem sum_degrees_eq_twice_card_edges : ∑ v, G.degree v = 2 * G.edgeFinset.c
 lemma two_mul_card_edgeFinset :
     2 * G.edgeFinset.card = (univ.filter fun (x, y) ↦ G.Adj x y).card := by
   rw [← dart_card_eq_twice_card_edges, ← card_univ]
-  refine card_bij' (fun d _ ↦ (d.fst, d.snd)) (fun xy h ↦ ⟨⟨xy, (mem_filter.1 h).2⟩) (by simp)
-    (by simp) (by simp)
+  refine card_bij' (fun d _ ↦ (d.fst, d.snd)) (fun xy h ↦ ⟨xy, (mem_filter.1 h).2⟩) ?_ ?_ ?_ ?_
+    <;> simp
 
 end DegreeSum
 
