@@ -749,7 +749,7 @@ theorem IsCycle.isConj_iff (hσ : IsCycle σ) (hτ : IsCycle τ) :
   ⟨by
     intro h
     obtain ⟨π, rfl⟩ := (_root_.isConj_iff).1 h
-    refine' Finset.card_congr (fun a _ => π a) (fun _ ha => _) (fun _ _ _ _ ab => π.injective ab)
+    refine' Finset.card_bij (fun a _ => π a) (fun _ ha => _) (fun _ _ _ _ ab => π.injective ab)
         fun b hb => _
     · simp [mem_support.1 ha]
     · refine' ⟨π⁻¹ b, ⟨_, π.apply_inv_self b⟩⟩

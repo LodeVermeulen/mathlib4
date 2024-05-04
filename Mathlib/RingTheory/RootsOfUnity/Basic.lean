@@ -952,7 +952,7 @@ theorem card_primitiveRoots {ζ : R} {k : ℕ} (h : IsPrimitiveRoot ζ k) :
   by_cases h0 : k = 0
   · simp [h0]
   symm
-  refine' Finset.card_congr (fun i _ => ζ ^ i) _ _ _
+  refine' Finset.card_bij (fun i _ => ζ ^ i) _ _ _
   · simp only [true_and_iff, and_imp, mem_filter, mem_range, mem_univ]
     rintro i - hi
     rw [mem_primitiveRoots (Nat.pos_of_ne_zero h0)]

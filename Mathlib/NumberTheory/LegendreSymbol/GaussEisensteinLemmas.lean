@@ -181,7 +181,7 @@ private theorem sum_Ico_eq_card_lt {p q : ℕ} :
             _ ≤ _ := Nat.div_mul_div_le_div _ _ _
       _ = _ := by
         rw [← card_sigma]
-        exact card_congr (fun a _ => ⟨a.1, a.2⟩) (by
+        exact card_bij' (fun a _ ↦ ⟨a.1, a.2⟩) (fun a _ ↦ ⟨a.1, a.2⟩) (by
           simp (config := { contextual := true }) only [mem_filter, mem_sigma, and_self_iff,
             forall_true_iff, mem_product])
           (fun ⟨_, _⟩ ⟨_, _⟩ => by

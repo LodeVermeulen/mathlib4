@@ -166,7 +166,7 @@ lemma IsTree.card_edgeFinset [Fintype V] [Fintype G.edgeSet] (hG : G.IsTree) :
     rw [Finset.card_compl, Finset.card_singleton, Nat.sub_add_cancel Fintype.card_pos]
   rw [← this, add_left_inj]
   choose f hf hf' using (hG.existsUnique_path · default)
-  refine Eq.symm <| Finset.card_congr
+  refine Eq.symm <| Finset.card_bij
           (fun w hw => ((f w).firstDart <| ?notNil).edge)
           (fun a ha => ?memEdges) ?inj ?surj
   case notNil => exact not_nil_of_ne (by simpa using hw)
