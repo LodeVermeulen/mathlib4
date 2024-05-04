@@ -185,8 +185,7 @@ private theorem sum_Ico_eq_card_lt {p q : ℕ} :
           (by simp (config := { contextual := true }) only [mem_filter, mem_sigma, and_self_iff,
             forall_true_iff, mem_product])
           (by simp (config := { contextual := true }) only [mem_filter, mem_sigma, and_self_iff,
-            forall_true_iff, mem_product])
-          (fun _ _ ↦ rfl) (fun _ _ ↦ rfl)
+            forall_true_iff, mem_product]) (fun _ _ ↦ rfl) (fun _ _ ↦ rfl)
 
 /-- Each of the sums in this lemma is the cardinality of the set of integer points in each of the
   two triangles formed by the diagonal of the rectangle `(0, p/2) × (0, q/2)`. Adding them
