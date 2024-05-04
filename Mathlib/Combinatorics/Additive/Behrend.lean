@@ -44,18 +44,15 @@ integer points on that sphere and map them onto `ℕ` in a way that preserves ar
 Salem-Spencer, Behrend construction, arithmetic progression, sphere, strictly convex
 -/
 
-
 open Nat hiding log
-
-open Finset Real
-
+open Finset Metric Real
 open scoped BigOperators Pointwise
 
 /-- The frontier of a closed strictly convex set only contains trivial arithmetic progressions.
 The idea is that an arithmetic progression is contained on a line and the frontier of a strictly
 convex set does not contain lines. -/
-theorem addSalemSpencer_frontier [LinearOrderedField 𝕜] [TopologicalSpace E] [AddCommMonoid E]
-    [Module 𝕜 E] {s : Set E} (hs₀ : IsClosed s) (hs₁ : StrictConvex 𝕜 s) :
+lemma addSalemSpencer_frontier {𝕜 E : Type*} [LinearOrderedField 𝕜] [TopologicalSpace E]
+    [AddCommMonoid E] [Module 𝕜 E] {s : Set E} (hs₀ : IsClosed s) (hs₁ : StrictConvex 𝕜 s) :
     AddSalemSpencer (frontier s) := by
   intro a ha b hb c hc habc
   obtain rfl : (1 / 2 : 𝕜) • a + (1 / 2 : 𝕜) • c = b := by
@@ -68,8 +65,8 @@ theorem addSalemSpencer_frontier [LinearOrderedField 𝕜] [TopologicalSpace E] 
   simp
 #align add_salem_spencer_frontier addSalemSpencer_frontier
 
-theorem addSalemSpencer_sphere [NormedAddCommGroup E] [NormedSpace ℝ E] [StrictConvexSpace ℝ E]
-    (x : E) (r : ℝ) : AddSalemSpencer (sphere x r) := by
+lemma addSalemSpencer_sphere {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [StrictConvexSpace ℝ E] (x : E) (r : ℝ) : AddSalemSpencer (sphere x r) := by
   obtain rfl | hr := eq_or_ne r 0
   · rw [sphere_zero]
     exact addSalemSpencer_singleton _
