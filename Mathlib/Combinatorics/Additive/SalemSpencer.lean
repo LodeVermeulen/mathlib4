@@ -113,7 +113,32 @@ theorem mulSalemSpencer_pi {ι : Type*} {α : ι → Type*} [∀ i, Monoid (α i
 end Monoid
 
 section CommMonoid
-variable [CommMonoid α] [CommMonoid β] {s : Set α} {t : Set β} {f : α → β} {a : α}
+variable [CommMonoid α] [CommMonoid β] {s A : Set α} {t B : Set β} {f : α → β} {a : α}
+
+/-- Arithmetic progressions of length three are preserved under `2`-Freiman homomorphisms. --/
+@[to_additive
+"Arithmetic progressions of length three are preserved under `2`-Freiman homomorphisms."]
+lemma MulSalemSpencer.of_image (hf : IsMulFreimanHom 2 s t f) (hf' : s.InjOn f) (hAs : A ⊆ s)
+    (hA : MulSalemSpencer (f '' A)) : MulSalemSpencer A :=
+  fun _ ha _ hb _ hc habc ↦ hf' (hAs ha) (hAs hb) <| hA (mem_image_of_mem _ ha)
+    (mem_image_of_mem _ hb) (mem_image_of_mem _ hc) <|
+    hf.mul_eq_mul (hAs ha) (hAs hc) (hAs hb) (hAs hb) habc
+#align mul_salem_spencer.of_image MulSalemSpencer.of_image
+#align add_salem_spencer.of_image AddSalemSpencer.of_image
+
+/-- Arithmetic progressions of length three are preserved under `2`-Freiman isomorphisms. --/
+@[to_additive
+"Arithmetic progressions of length three are preserved under `2`-Freiman isomorphisms."]
+lemma mulSalemSpencer_image (hf : IsMulFreimanIso 2 s t f) (hAs : A ⊆ s) :
+    MulSalemSpencer (f '' A) ↔ MulSalemSpencer A := by
+  have : f '' A ⊆ t := (hf.bijOn.mapsTo.mono hAs Subset.rfl).image_subset
+  rw [MulSalemSpencer, MulSalemSpencer]
+  have := (hf.bijOn.injOn.mono hAs).bijOn_image (f := f)
+  simp (config := { contextual := true }) only [((hf.bijOn.injOn.mono hAs).bijOn_image (f := f)).forall, hf.mul_eq_mul (hAs _) (hAs _) (hAs _) (hAs _), this.injOn.eq_iff]
+
+@[to_additive] alias ⟨_, MulSalemSpencer.image⟩ := mulSalemSpencer_image
+#align mul_salem_spencer.image MulSalemSpencer.image
+#align add_salem_spencer.image AddSalemSpencer.image
 
 /-- Arithmetic progressions of length three are preserved under `2`-Freiman homomorphisms. --/
 @[to_additive]
@@ -121,8 +146,6 @@ lemma IsMulFreimanHom.mulSalemSpencer (hf : IsMulFreimanHom 2 s t f) (hf' : s.In
     (ht : MulSalemSpencer t) : MulSalemSpencer s :=
   fun _ ha _ hb _ hc habc ↦ hf' ha hb <| ht (hf.mapsTo ha) (hf.mapsTo hb) (hf.mapsTo hc) <|
     hf.mul_eq_mul ha hc hb hb habc
-#align mul_salem_spencer.of_image IsMulFreimanHom.mulSalemSpencer
-#align add_salem_spencer.of_image IsAddFreimanHom.addSalemSpencer
 
 /-- Arithmetic progressions of length three are preserved under `2`-Freiman isomorphisms. --/
 @[to_additive]
@@ -136,12 +159,10 @@ lemma IsMulFreimanIso.mulSalemSpencer_congr (hf : IsMulFreimanIso 2 s t f) :
     exact congr_arg f $ hs ha hb hc $ (hf.mul_eq_mul ha hc hb hb).1 habc
 
 @[to_additive]
-theorem MulSalemSpencer.image [FunLike F α β] [MulHomClass F α β] (f : F) (hf : (s * s).InjOn f)
+theorem MulSalemSpencer.image' [FunLike F α β] [MulHomClass F α β] (f : F) (hf : (s * s).InjOn f)
     (h : MulSalemSpencer s) : MulSalemSpencer (f '' s) := by
   rintro _ ⟨a, ha, rfl⟩ _ ⟨b, hb, rfl⟩ _ ⟨c, hc, rfl⟩ habc
   rw [h ha hb hc (hf (mul_mem_mul ha hc) (mul_mem_mul hb hb) <| by rwa [map_mul, map_mul])]
-#align mul_salem_spencer.image MulSalemSpencer.image
-#align add_salem_spencer.image AddSalemSpencer.image
 
 end CommMonoid
 
@@ -395,7 +416,7 @@ section CommMonoid
 variable [CommMonoid α] [CommMonoid β] [DecidableEq β] {A : Finset α} {B : Finset β} {f : α → β}
 
 /-- Arithmetic progressions can be pushed forward along bijective 2-Freiman homs. -/
-@[to_additive]
+@[to_additive "Arithmetic progressions can be pushed forward along bijective 2-Freiman homs."]
 lemma IsMulFreimanHom.mulRothNumber_mono (hf : IsMulFreimanHom 2 A B f) (hf' : Set.BijOn f A B) :
     mulRothNumber B ≤ mulRothNumber A := by
   obtain ⟨s, hsB, hcard, hs⟩ := mulRothNumber_spec B
@@ -404,10 +425,12 @@ lemma IsMulFreimanHom.mulRothNumber_mono (hf : IsMulFreimanHom 2 A B f) (hf' : S
   have hfsA : Set.SurjOn f A s := hf'.surjOn.mono Subset.rfl (coe_subset.2 hsB)
   rw [← hcard, ← s.card_image_of_injOn ((invFunOn_injOn_image f _).mono hfsA)]
   refine MulSalemSpencer.le_mulRothNumber ?_ (mod_cast hsA)
+  rw [coe_image]
+
   simpa using (hf.subset hsA hfsA.bijOn_subset.mapsTo).mulSalemSpencer (hf'.injOn.mono hsA) hs
 
 /-- Arithmetic progressions are preserved under 2-Freiman isos. -/
-@[to_additive]
+@[to_additive "Arithmetic progressions are preserved under 2-Freiman isos."]
 lemma IsMulFreimanIso.mulRothNumber_congr (hf : IsMulFreimanIso 2 A B f) :
     mulRothNumber A = mulRothNumber B := by
   refine le_antisymm ?_ (hf.isMulFreimanHom.mulRothNumber_mono hf.bijOn)
