@@ -3,8 +3,6 @@ Copyright (c) 2021 Yaël Dillies, Bhavik Mehta. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yaël Dillies, Bhavik Mehta
 -/
-import Mathlib.Analysis.Asymptotics.Asymptotics
-import Mathlib.Analysis.Convex.StrictConvexSpace
 import Mathlib.Combinatorics.Additive.FreimanHom
 
 #align_import combinatorics.additive.salem_spencer from "leanprover-community/mathlib"@"acf5258c81d0bc7cb254ed026c1352e685df306c"
@@ -41,9 +39,8 @@ Salem-Spencer, Roth, arithmetic progression, average, three-free
 -/
 
 
-open Finset Function Metric Nat
-
-open Pointwise
+open Finset Function Nat
+open scoped Pointwise
 
 variable {F α β 𝕜 E : Type*}
 
@@ -131,10 +128,11 @@ lemma MulSalemSpencer.of_image (hf : IsMulFreimanHom 2 s t f) (hf' : s.InjOn f) 
 "Arithmetic progressions of length three are preserved under `2`-Freiman isomorphisms."]
 lemma mulSalemSpencer_image (hf : IsMulFreimanIso 2 s t f) (hAs : A ⊆ s) :
     MulSalemSpencer (f '' A) ↔ MulSalemSpencer A := by
-  have : f '' A ⊆ t := (hf.bijOn.mapsTo.mono hAs Subset.rfl).image_subset
   rw [MulSalemSpencer, MulSalemSpencer]
   have := (hf.bijOn.injOn.mono hAs).bijOn_image (f := f)
-  simp (config := { contextual := true }) only [((hf.bijOn.injOn.mono hAs).bijOn_image (f := f)).forall, hf.mul_eq_mul (hAs _) (hAs _) (hAs _) (hAs _), this.injOn.eq_iff]
+  simp (config := { contextual := true }) only
+    [((hf.bijOn.injOn.mono hAs).bijOn_image (f := f)).forall,
+    hf.mul_eq_mul (hAs _) (hAs _) (hAs _) (hAs _), this.injOn.eq_iff]
 
 @[to_additive] alias ⟨_, MulSalemSpencer.image⟩ := mulSalemSpencer_image
 #align mul_salem_spencer.image MulSalemSpencer.image
@@ -276,33 +274,6 @@ theorem addSalemSpencer_iff_eq_right {s : Set ℕ} :
 #align add_salem_spencer_iff_eq_right addSalemSpencer_iff_eq_right
 
 end Nat
-
-/-- The frontier of a closed strictly convex set only contains trivial arithmetic progressions.
-The idea is that an arithmetic progression is contained on a line and the frontier of a strictly
-convex set does not contain lines. -/
-theorem addSalemSpencer_frontier [LinearOrderedField 𝕜] [TopologicalSpace E] [AddCommMonoid E]
-    [Module 𝕜 E] {s : Set E} (hs₀ : IsClosed s) (hs₁ : StrictConvex 𝕜 s) :
-    AddSalemSpencer (frontier s) := by
-  intro a ha b hb c hc habc
-  obtain rfl : (1 / 2 : 𝕜) • a + (1 / 2 : 𝕜) • c = b := by
-    rwa [← smul_add, one_div, inv_smul_eq_iff₀ (show (2 : 𝕜) ≠ 0 by norm_num), two_smul]
-  have :=
-    hs₁.eq (hs₀.frontier_subset ha) (hs₀.frontier_subset hc) one_half_pos one_half_pos
-      (add_halves _) hb.2
-  simp [this, ← add_smul]
-  ring_nf
-  simp
-#align add_salem_spencer_frontier addSalemSpencer_frontier
-
-theorem addSalemSpencer_sphere [NormedAddCommGroup E] [NormedSpace ℝ E] [StrictConvexSpace ℝ E]
-    (x : E) (r : ℝ) : AddSalemSpencer (sphere x r) := by
-  obtain rfl | hr := eq_or_ne r 0
-  · rw [sphere_zero]
-    exact addSalemSpencer_singleton _
-  · convert addSalemSpencer_frontier isClosed_ball (strictConvex_closedBall ℝ x r)
-    exact (frontier_closedBall _ hr).symm
-#align add_salem_spencer_sphere addSalemSpencer_sphere
-
 end SalemSpencer
 
 open Finset
@@ -538,20 +509,6 @@ theorem addRothNumber_Ico (a b : ℕ) : addRothNumber (Ico a b) = rothNumberNat 
   convert (image_add_left_Ico 0 (b - a) _).symm
   exact (add_tsub_cancel_of_le h).symm
 #align add_roth_number_Ico addRothNumber_Ico
-
-open Asymptotics Filter
-
-theorem rothNumberNat_isBigOWith_id :
-    IsBigOWith 1 atTop (fun N => (rothNumberNat N : ℝ)) fun N => (N : ℝ) :=
-  isBigOWith_of_le _ <| by simpa only [Real.norm_natCast, Nat.cast_le] using rothNumberNat_le
-set_option linter.uppercaseLean3 false in
-#align roth_number_nat_is_O_with_id rothNumberNat_isBigOWith_id
-
-/-- The Roth number has the trivial bound `rothNumberNat N = O(N)`. -/
-theorem rothNumberNat_isBigO_id : (fun N => (rothNumberNat N : ℝ)) =O[atTop] fun N => (N : ℝ) :=
-  rothNumberNat_isBigOWith_id.isBigO
-set_option linter.uppercaseLean3 false in
-#align roth_number_nat_is_O_id rothNumberNat_isBigO_id
 
 lemma Fin.addRothNumber_eq_rothNumberNat (hkn : 2 * k ≤ n) :
     addRothNumber (Iio k : Finset (Fin n.succ)) = rothNumberNat k :=

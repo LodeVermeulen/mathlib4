@@ -6,9 +6,10 @@ Authors: Yaël Dillies
 import Mathlib.Combinatorics.Additive.FreimanHom
 
 /-!
-# The corners theorem and Roth's theorem
+# Corners
 
-This file proves the corners theorem and Roth's theorem.
+This file defines corners, namely triples of the form `(x, y), (x, y + d), (x + d, y)`, and the
+property of being corner-free the corners theorem and Roth's theorem.
 
 ## References
 
@@ -41,8 +42,8 @@ def IsCornerFree (A : Set (G × G)) : Prop := ∀ ⦃x₁ y₁ x₂ y₂⦄, IsC
 
 /-- A convenient restatement of corner-freeness in terms of an ambient product set. -/
 lemma isCornerFree_iff (hAs : A ⊆ s ×ˢ s) :
-  IsCornerFree A ↔ ∀ ⦃x₁⦄, x₁ ∈ s → ∀ ⦃y₁⦄, y₁ ∈ s → ∀ ⦃x₂⦄, x₂ ∈ s → ∀ ⦃y₂⦄, y₂ ∈ s →
-    IsCorner A x₁ y₁ x₂ y₂ → x₁ = x₂ where
+    IsCornerFree A ↔ ∀ ⦃x₁⦄, x₁ ∈ s → ∀ ⦃y₁⦄, y₁ ∈ s → ∀ ⦃x₂⦄, x₂ ∈ s → ∀ ⦃y₂⦄, y₂ ∈ s →
+      IsCorner A x₁ y₁ x₂ y₂ → x₁ = x₂ where
   mp hA _x₁ _ _y₁ _ _x₂ _ _y₂ _ hxy := hA hxy
   mpr hA _x₁ _y₁ _x₂ _y₂ hxy := hA (hAs hxy.fst_fst_mem).1 (hAs hxy.fst_fst_mem).2
     (hAs hxy.snd_fst_mem).1 (hAs hxy.fst_snd_mem).2 hxy

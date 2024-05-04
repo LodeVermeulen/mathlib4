@@ -19,86 +19,6 @@ This file proves the corners theorem and Roth's theorem.
 * [Wikipedia, *Corners theorem*](https://en.wikipedia.org/wiki/Corners_theorem)
 -/
 
-namespace Finset
-variable {α β : Type*} {A : Finset α} {B : Finset β}
-
-/-- Reorder a finset.
-
-The difference with `Finset.card_bij'` is that the bijection is specified as a surjective injection,
-rather than by an inverse function.
-
-The difference with `Finset.card_nbij` is that the bijection is allowed to use membership of the
-domain, rather than being a non-dependent function. -/
-lemma card_bij (i : ∀ a ∈ A, β) (hi : ∀ a ha, i a ha ∈ B)
-    (i_inj : ∀ a₁ ha₁ a₂ ha₂, i a₁ ha₁ = i a₂ ha₂ → a₁ = a₂)
-    (i_surj : ∀ b ∈ B, ∃ a ha, i a ha = b) : A.card = B.card := by
-  classical
-  calc
-    A.card = A.attach.card := card_attach.symm
-    _      = (A.attach.image fun a : { a // a ∈ A } => i a.1 a.2).card := Eq.symm ?_
-    _      = B.card := ?_
-  · apply card_image_of_injective
-    intro ⟨_, _⟩ ⟨_, _⟩ h
-    simpa using i_inj _ _ _ _ h
-  · congr 1
-    ext b
-    constructor <;> intro h
-    · obtain ⟨_, _, rfl⟩ := mem_image.1 h; apply hi
-    · obtain ⟨a, ha, rfl⟩ := i_surj b h; exact mem_image.2 ⟨⟨a, ha⟩, by simp⟩
-
-/-- Reorder a finset.
-
-The difference with `Finset.card_bij` is that the bijection is specified with an inverse, rather
-than as a surjective injection.
-
-The difference with `Finset.card_nbij'` is that the bijection and its inverse are allowed to use
-membership of the domains, rather than being non-dependent functions. -/
-lemma card_bij' (i : ∀ a ∈ A, β) (j : ∀ a ∈ B, α) (hi : ∀ a ha, i a ha ∈ B)
-    (hj : ∀ a ha, j a ha ∈ A) (left_inv : ∀ a ha, j (i a ha) (hi a ha) = a)
-    (right_inv : ∀ a ha, i (j a ha) (hj a ha) = a) : A.card = B.card := by
-  refine card_bij i hi (fun a1 h1 a2 h2 eq ↦ ?_) (fun b hb ↦ ⟨_, hj b hb, right_inv b hb⟩)
-  rw [← left_inv a1 h1, ← left_inv a2 h2]
-  simp only [eq]
-
-/-- Reorder a finset.
-
-The difference with `Finset.card_nbij'` is that the bijection is specified as a surjective
-injection, rather than by an inverse function.
-
-The difference with `Finset.card_bij` is that the bijection is a non-dependent function, rather than
-being allowed to use membership of the domain. -/
-lemma card_nbij (i : α → β) (hi : ∀ a ∈ A, i a ∈ B) (i_inj : (A : Set α).InjOn i)
-    (i_surj : (A : Set α).SurjOn i B) : A.card = B.card :=
-  card_bij (fun a _ ↦ i a) hi i_inj (by simpa using i_surj)
-
-/-- Reorder a finset.
-
-The difference with `Finset.card_nbij` is that the bijection is specified with an inverse, rather
-than as a surjective injection.
-
-The difference with `Finset.card_bij'` is that the bijection and its inverse are non-dependent
-functions, rather than being allowed to use membership of the domains.
-
-The difference with `Finset.card_equiv` is that bijectivity is only required to hold on the domains,
-rather than on the entire types. -/
-lemma card_nbij' (i : α → β) (j : β → α) (hi : ∀ a ∈ A, i a ∈ B) (hj : ∀ a ∈ B, j a ∈ A)
-    (left_inv : ∀ a ∈ A, j (i a) = a) (right_inv : ∀ a ∈ B, i (j a) = a) : A.card = B.card :=
-  card_bij' (fun a _ ↦ i a) (fun b _ ↦ j b) hi hj left_inv right_inv
-
-/-- Specialization of `Finset.card_nbij'` that automatically fills in most arguments.
-
-See `Fintype.card_equiv` for the version where `A` and `B` are `univ`. -/
-lemma card_equiv (e : α ≃ β) (hst : ∀ i, i ∈ A ↔ e i ∈ B) : A.card = B.card := by
-  refine card_nbij' e e.symm ?_ ?_ ?_ ?_ <;> simp [hst]
-
-/-- Specialization of `Finset.card_bij` that automatically fills in most arguments.
-
-See `Fintype.card_bijective` for the version where `A` and `B` are `univ`. -/
-lemma card_bijective (e : α → β) (he : e.Bijective) (hst : ∀ i, i ∈ A ↔ e i ∈ B) :
-    A.card = B.card := card_equiv (.ofBijective e he) hst
-
-end Finset
-
 open Finset SimpleGraph SimpleGraph.TripartiteFromTriangles Sum Sum3
 open Function hiding graph
 open Fintype (card)
@@ -177,10 +97,21 @@ lemma corners_theorem_nat (hε : 0 < ε) :
   obtain ⟨n₀, hn₀⟩ := corners_theorem (ε / 9) (by positivity)
   refine ⟨n₀ + 1, fun n hn A hAn hAε hA ↦ ?_⟩
   rw [← coe_subset, coe_product] at hAn
-  have : (A : Set (ℕ × ℕ)) = Prod.map Fin.val Fin.val '' (Prod.map Nat.cast Nat.cast '' (A : Set (ℕ × ℕ)) : Set (Fin (2 * n).succ × Fin (2 * n).succ)) := sorry
+  have : A = Prod.map Fin.val Fin.val ''
+      (Prod.map Nat.cast Nat.cast '' A : Set (Fin (2 * n).succ × Fin (2 * n).succ)) := by
+    rw [Set.image_image, Set.image_congr, Set.image_id]
+    simp only [mem_coe, Nat.succ_eq_add_one, Prod_map, Fin.val_natCast, id_eq, Prod.forall,
+      Prod.mk.injEq, Nat.mod_succ_eq_iff_lt]
+    rintro a b hab
+    have := hAn hab
+    simp at this
+    omega
   rw [this] at hA
   have := Fin.isAddFreimanIso_Iio two_ne_zero (le_refl (2 * n))
-  have := hA.of_image this.isAddFreimanHom (Fin.val_injective.injOn _) sorry
+  have := hA.of_image this.isAddFreimanHom (Fin.val_injective.injOn _) $ by
+    refine Set.image_subset_iff.2 $ hAn.trans fun x hx ↦ ?_
+    simp only [coe_range, Set.mem_prod, Set.mem_Iio] at hx
+    exact ⟨Fin.cast_strictMono (by omega) hx.1, Fin.cast_strictMono (by omega) hx.2⟩
   rw [← coe_image] at this
   refine hn₀ _ (by simp; omega) _ ?_ this
   calc
@@ -228,10 +159,18 @@ lemma roth_nat (ε : ℝ) (hε : 0 < ε) :
   obtain ⟨n₀, hn₀⟩ := roth (ε / 3) (by positivity)
   refine ⟨n₀ + 1, fun n hn A hAn hAε hA ↦ ?_⟩
   rw [← coe_subset, coe_range] at hAn
-  have : (A : Set ℕ) = Fin.val '' (Nat.cast '' (A : Set ℕ) : Set (Fin (2 * n).succ)) := sorry
+  have : A = Fin.val '' (Nat.cast '' A : Set (Fin (2 * n).succ)) := by
+    rw [Set.image_image, Set.image_congr, Set.image_id]
+    simp only [mem_coe, Nat.succ_eq_add_one, Fin.val_natCast, id_eq, Nat.mod_succ_eq_iff_lt]
+    rintro a ha
+    have := hAn ha
+    simp at this
+    omega
   rw [this] at hA
   have := Fin.isAddFreimanIso_Iio two_ne_zero (le_refl (2 * n))
-  have := hA.of_image this.isAddFreimanHom (Fin.val_injective.injOn _) sorry
+  have := hA.of_image this.isAddFreimanHom (Fin.val_injective.injOn _) $ Set.image_subset_iff.2 $
+      hAn.trans fun x hx ↦ Fin.cast_strictMono (by omega) $ by
+        simpa only [coe_range, Set.mem_Iio] using hx
   rw [← coe_image] at this
   refine hn₀ _ (by simp; omega) _ ?_ this
   calc
@@ -241,9 +180,8 @@ lemma roth_nat (ε : ℝ) (hε : 0 < ε) :
     _ ≤ A.card := hAε
     _ = _ := by
       rw [card_image_of_injOn]
-      refine (CharP.natCast_injOn_Iio (Fin (2 * n).succ) (2 * n).succ).mono $ hAn.trans ?_
-      simp
-      omega
+      exact (CharP.natCast_injOn_Iio (Fin (2 * n).succ) (2 * n).succ).mono $ hAn.trans $ by
+        simp; omega
 
 open Asymptotics Filter
 

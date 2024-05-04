@@ -7,6 +7,7 @@ import Mathlib.Algebra.BigOperators.Multiset.Basic
 import Mathlib.Algebra.CharP.Basic
 import Mathlib.Data.FunLike.Basic
 import Mathlib.Data.Set.Pointwise.Basic
+import Mathlib.Combinatorics.Additive.Mathlib
 
 #align_import algebra.hom.freiman from "leanprover-community/mathlib"@"f694c7dead66f5d4c80f446c796a5aad14707f0e"
 
@@ -48,43 +49,6 @@ an `AddMonoid`/`Monoid` instead of the `AddMonoid`/`Monoid` itself.
   `(s.map f).prod = (t.map f).prod` directly by induction instead of going through `f s.prod`.
 * Affine maps are Freiman homs.
 -/
-
-section AddMonoidWithOne
-variable (R : Type*) [AddMonoidWithOne R] [IsRightCancelAdd R] (p : ℕ) [CharP R p]
-
-lemma CharP.natCast_injOn_Iio : (Set.Iio p).InjOn ((↑) : ℕ → R) :=
-  fun _a ha _b hb hab ↦ ((natCast_eq_natCast _ _).1 hab).eq_of_lt_of_lt ha hb
-
-end AddMonoidWithOne
-
-namespace Fin
-variable {n a b : ℕ}
-
-lemma cast_le_cast' (han : a ≤ n) (hbn : b ≤ n) : (a : Fin n.succ) ≤ b ↔ a ≤ b := by
-  rw [← Nat.lt_succ_iff] at han hbn
-  simp [le_iff_val_le_val, -val_fin_le, Nat.mod_eq_of_lt, han, hbn]
-
-lemma cast_lt_cast (han : a ≤ n) (hbn : b ≤ n) : (a : Fin n.succ) < b ↔ a < b := by
-  rw [← Nat.lt_succ_iff] at han hbn; simp [lt_iff_val_lt_val, Nat.mod_eq_of_lt, han, hbn]
-
-lemma cast_mono (hbn : b ≤ n) (hab : a ≤ b) : (a : Fin n.succ) ≤ b :=
-  (cast_le_cast' (hab.trans hbn) hbn).2 hab
-
-lemma cast_strictMono (hbn : b ≤ n) (hab : a < b) : (a : Fin n.succ) < b :=
-  (cast_lt_cast (hab.le.trans hbn) hbn).2 hab
-
-end Fin
-
-namespace Multiset
-variable {α β : Type*} [CommMonoid α] [CommMonoid β]
-
-@[to_additive] lemma fst_prod (s : Multiset (α × β)) : s.prod.1 = (s.map Prod.fst).prod :=
-  map_multiset_prod (MonoidHom.fst _ _) _
-
-@[to_additive] lemma snd_prod (s : Multiset (α × β)) : s.prod.2 = (s.map Prod.snd).prod :=
-  map_multiset_prod (MonoidHom.snd _ _) _
-
-end Multiset
 
 open Multiset Set
 open scoped Pointwise

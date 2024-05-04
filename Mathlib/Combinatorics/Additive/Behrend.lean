@@ -51,6 +51,32 @@ open Finset Real
 
 open scoped BigOperators Pointwise
 
+/-- The frontier of a closed strictly convex set only contains trivial arithmetic progressions.
+The idea is that an arithmetic progression is contained on a line and the frontier of a strictly
+convex set does not contain lines. -/
+theorem addSalemSpencer_frontier [LinearOrderedField 𝕜] [TopologicalSpace E] [AddCommMonoid E]
+    [Module 𝕜 E] {s : Set E} (hs₀ : IsClosed s) (hs₁ : StrictConvex 𝕜 s) :
+    AddSalemSpencer (frontier s) := by
+  intro a ha b hb c hc habc
+  obtain rfl : (1 / 2 : 𝕜) • a + (1 / 2 : 𝕜) • c = b := by
+    rwa [← smul_add, one_div, inv_smul_eq_iff₀ (show (2 : 𝕜) ≠ 0 by norm_num), two_smul]
+  have :=
+    hs₁.eq (hs₀.frontier_subset ha) (hs₀.frontier_subset hc) one_half_pos one_half_pos
+      (add_halves _) hb.2
+  simp [this, ← add_smul]
+  ring_nf
+  simp
+#align add_salem_spencer_frontier addSalemSpencer_frontier
+
+theorem addSalemSpencer_sphere [NormedAddCommGroup E] [NormedSpace ℝ E] [StrictConvexSpace ℝ E]
+    (x : E) (r : ℝ) : AddSalemSpencer (sphere x r) := by
+  obtain rfl | hr := eq_or_ne r 0
+  · rw [sphere_zero]
+    exact addSalemSpencer_singleton _
+  · convert addSalemSpencer_frontier isClosed_ball (strictConvex_closedBall ℝ x r)
+    exact (frontier_closedBall _ hr).symm
+#align add_salem_spencer_sphere addSalemSpencer_sphere
+
 namespace Behrend
 
 variable {α β : Type*} {n d k N : ℕ} {x : Fin n → ℕ}
