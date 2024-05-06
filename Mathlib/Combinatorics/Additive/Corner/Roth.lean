@@ -3,8 +3,8 @@ Copyright (c) 2022 Yaël Dillies, Bhavik Mehta. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yaël Dillies, Bhavik Mehta
 -/
+import Mathlib.Combinatorics.Additive.AP.Three
 import Mathlib.Combinatorics.Additive.Corner.Defs
-import Mathlib.Combinatorics.Additive.SalemSpencer
 import Mathlib.Combinatorics.SimpleGraph.Triangle.Tripartite
 import Mathlib.Combinatorics.SimpleGraph.Triangle.Removal
 
@@ -111,7 +111,7 @@ lemma corners_theorem_nat (hε : 0 < ε) :
   have := hA.of_image this.isAddFreimanHom (Fin.val_injective.injOn _) $ by
     refine Set.image_subset_iff.2 $ hAn.trans fun x hx ↦ ?_
     simp only [coe_range, Set.mem_prod, Set.mem_Iio] at hx
-    exact ⟨Fin.cast_strictMono (by omega) hx.1, Fin.cast_strictMono (by omega) hx.2⟩
+    exact ⟨Fin.natCast_strictMono (by omega) hx.1, Fin.natCast_strictMono (by omega) hx.2⟩
   rw [← coe_image] at this
   refine hn₀ _ (by simp; omega) _ ?_ this
   calc
@@ -130,7 +130,7 @@ lemma corners_theorem_nat (hε : 0 < ε) :
 The maximum density of a 3AP-free set in `G` goes to zero as `|G|` tends to infinity. -/
 lemma roth (ε : ℝ) (hε : 0 < ε) :
     ∃ n₀ : ℕ, ∀ G, [AddCommGroup G] → [Fintype G] → n₀ ≤ card G → ∀ A : Finset G,
-      ε * card G ≤ A.card → ¬ AddSalemSpencer (A : Set G) := by
+      ε * card G ≤ A.card → ¬ ThreeAPFree (A : Set G) := by
   obtain ⟨n₀, hn₀⟩ := corners_theorem ε hε
   refine ⟨n₀, fun G _ _ hG A hAcard hA ↦ ?_⟩
   classical
@@ -155,7 +155,7 @@ lemma roth (ε : ℝ) (hε : 0 < ε) :
 
 The maximum density of a 3AP-free set in `{1, ..., n}` goes to zero as `n` tends to infinity. -/
 lemma roth_nat (ε : ℝ) (hε : 0 < ε) :
-    ∃ n₀ : ℕ, ∀ n, n₀ ≤ n → ∀ A ⊆ range n, ε * n ≤ A.card → ¬ AddSalemSpencer (A : Set ℕ) := by
+    ∃ n₀ : ℕ, ∀ n, n₀ ≤ n → ∀ A ⊆ range n, ε * n ≤ A.card → ¬ ThreeAPFree (A : Set ℕ) := by
   obtain ⟨n₀, hn₀⟩ := roth (ε / 3) (by positivity)
   refine ⟨n₀ + 1, fun n hn A hAn hAε hA ↦ ?_⟩
   rw [← coe_subset, coe_range] at hAn
@@ -169,7 +169,7 @@ lemma roth_nat (ε : ℝ) (hε : 0 < ε) :
   rw [this] at hA
   have := Fin.isAddFreimanIso_Iio two_ne_zero (le_refl (2 * n))
   have := hA.of_image this.isAddFreimanHom (Fin.val_injective.injOn _) $ Set.image_subset_iff.2 $
-      hAn.trans fun x hx ↦ Fin.cast_strictMono (by omega) $ by
+      hAn.trans fun x hx ↦ Fin.natCast_strictMono (by omega) $ by
         simpa only [coe_range, Set.mem_Iio] using hx
   rw [← coe_image] at this
   refine hn₀ _ (by simp; omega) _ ?_ this

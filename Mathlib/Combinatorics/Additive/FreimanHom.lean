@@ -431,37 +431,3 @@ end Fin
 #noalign add_freiman_hom.to_add_freiman_hom_coe
 #noalign freiman_hom.to_freiman_hom_injective
 #noalign add_freiman_hom.to_freiman_hom_injective
-
-namespace Set
-variable {α₁ α₂ β₁ β₂ : Type*} {s₁ : Set α₁} {s₂ : Set α₂} {t₁ : Set β₁} {t₂ : Set β₂}
-  {f₁ : α₁ → β₁} {f₂ : α₂ → β₂}
-
-lemma InjOn.prodMap (h₁ : s₁.InjOn f₁) (h₂ : s₂.InjOn f₂) :
-    (s₁ ×ˢ s₂).InjOn fun x ↦ (f₁ x.1, f₂ x.2) :=
-  fun x hx y hy ↦ by simp_rw [Prod.ext_iff]; exact And.imp (h₁ hx.1 hy.1) (h₂ hx.2 hy.2)
-
-lemma SurjOn.prodMap (h₁ : SurjOn f₁ s₁ t₁) (h₂ : SurjOn f₂ s₂ t₂) :
-    SurjOn (fun x ↦ (f₁ x.1, f₂ x.2)) (s₁ ×ˢ s₂) (t₁ ×ˢ t₂) := by
-  rintro x hx
-  obtain ⟨a₁, ha₁, hx₁⟩ := h₁ hx.1
-  obtain ⟨a₂, ha₂, hx₂⟩ := h₂ hx.2
-  exact ⟨(a₁, a₂), ⟨ha₁, ha₂⟩, Prod.ext hx₁ hx₂⟩
-
-lemma MapsTo.prodMap (h₁ : MapsTo f₁ s₁ t₁) (h₂ : MapsTo f₂ s₂ t₂) :
-    MapsTo (fun x ↦ (f₁ x.1, f₂ x.2)) (s₁ ×ˢ s₂) (t₁ ×ˢ t₂) :=
-  fun _x hx ↦ ⟨h₁ hx.1, h₂ hx.2⟩
-
-lemma BijOn.prodMap (h₁ : BijOn f₁ s₁ t₁) (h₂ : BijOn f₂ s₂ t₂) :
-    BijOn (fun x ↦ (f₁ x.1, f₂ x.2)) (s₁ ×ˢ s₂) (t₁ ×ˢ t₂) :=
-  ⟨h₁.mapsTo.prodMap h₂.mapsTo, h₁.injOn.prodMap h₂.injOn, h₁.surjOn.prodMap h₂.surjOn⟩
-
-end Set
-
-namespace Set
-variable {α β : Type*} {f : α → β} {s : Set α} {t : Set β} {p : β → Prop}
-
-lemma BijOn.forall (hf : BijOn f s t) : (∀ b ∈ t, p b) ↔ ∀ a ∈ s, p (f a) where
-  mp h a ha := h _ $ hf.mapsTo ha
-  mpr h b hb := by obtain ⟨a, ha, rfl⟩ := hf.surjOn hb; exact h _ ha
-
-end Set

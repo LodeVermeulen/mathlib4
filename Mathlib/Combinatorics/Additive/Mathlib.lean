@@ -20,35 +20,6 @@ lemma CharP.natCast_injOn_Iio : (Set.Iio p).InjOn ((↑) : ℕ → R) :=
 
 end AddMonoidWithOne
 
-namespace Fin
-variable {n a b : ℕ}
-
-lemma cast_le_cast' (han : a ≤ n) (hbn : b ≤ n) : (a : Fin n.succ) ≤ b ↔ a ≤ b := by
-  rw [← Nat.lt_succ_iff] at han hbn
-  simp [le_iff_val_le_val, -val_fin_le, Nat.mod_eq_of_lt, han, hbn]
-
-lemma cast_lt_cast (han : a ≤ n) (hbn : b ≤ n) : (a : Fin n.succ) < b ↔ a < b := by
-  rw [← Nat.lt_succ_iff] at han hbn; simp [lt_iff_val_lt_val, Nat.mod_eq_of_lt, han, hbn]
-
-lemma cast_mono (hbn : b ≤ n) (hab : a ≤ b) : (a : Fin n.succ) ≤ b :=
-  (cast_le_cast' (hab.trans hbn) hbn).2 hab
-
-lemma cast_strictMono (hbn : b ≤ n) (hab : a < b) : (a : Fin n.succ) < b :=
-  (cast_lt_cast (hab.le.trans hbn) hbn).2 hab
-
-end Fin
-
-namespace Multiset
-variable {α β : Type*} [CommMonoid α] [CommMonoid β]
-
-@[to_additive] lemma fst_prod (s : Multiset (α × β)) : s.prod.1 = (s.map Prod.fst).prod :=
-  map_multiset_prod (MonoidHom.fst _ _) _
-
-@[to_additive] lemma snd_prod (s : Multiset (α × β)) : s.prod.2 = (s.map Prod.snd).prod :=
-  map_multiset_prod (MonoidHom.snd _ _) _
-
-end Multiset
-
 namespace Finset
 variable {α β : Type*} {A : Finset α} {B : Finset β}
 
