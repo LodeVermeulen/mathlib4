@@ -117,7 +117,7 @@ end Monoid
 section CommMonoid
 variable [CommMonoid α] [CommMonoid β] {s A : Set α} {t B : Set β} {f : α → β} {a : α}
 
-/-- Arithmetic progressions of length three are preserved under `2`-Freiman homomorphisms. --/
+/-- Arithmetic progressions of length three are preserved under `2`-Freiman homomorphisms. -/
 @[to_additive
 "Arithmetic progressions of length three are preserved under `2`-Freiman homomorphisms."]
 lemma ThreeGPFree.of_image (hf : IsMulFreimanHom 2 s t f) (hf' : s.InjOn f) (hAs : A ⊆ s)
@@ -128,7 +128,7 @@ lemma ThreeGPFree.of_image (hf : IsMulFreimanHom 2 s t f) (hf' : s.InjOn f) (hAs
 #align mul_salem_spencer.of_image ThreeGPFree.of_image
 #align add_salem_spencer.of_image ThreeAPFree.of_image
 
-/-- Arithmetic progressions of length three are preserved under `2`-Freiman isomorphisms. --/
+/-- Arithmetic progressions of length three are preserved under `2`-Freiman isomorphisms. -/
 @[to_additive
 "Arithmetic progressions of length three are preserved under `2`-Freiman isomorphisms."]
 lemma threeGPFree_image (hf : IsMulFreimanIso 2 s t f) (hAs : A ⊆ s) :
@@ -143,14 +143,14 @@ lemma threeGPFree_image (hf : IsMulFreimanIso 2 s t f) (hAs : A ⊆ s) :
 #align mul_salem_spencer.image ThreeGPFree.image
 #align add_salem_spencer.image ThreeAPFree.image
 
-/-- Arithmetic progressions of length three are preserved under `2`-Freiman homomorphisms. --/
+/-- Arithmetic progressions of length three are preserved under `2`-Freiman homomorphisms. -/
 @[to_additive]
 lemma IsMulFreimanHom.threeGPFree (hf : IsMulFreimanHom 2 s t f) (hf' : s.InjOn f)
     (ht : ThreeGPFree t) : ThreeGPFree s :=
   fun _ ha _ hb _ hc habc ↦ hf' ha hb <| ht (hf.mapsTo ha) (hf.mapsTo hb) (hf.mapsTo hc) <|
     hf.mul_eq_mul ha hc hb hb habc
 
-/-- Arithmetic progressions of length three are preserved under `2`-Freiman isomorphisms. --/
+/-- Arithmetic progressions of length three are preserved under `2`-Freiman isomorphisms. -/
 @[to_additive]
 lemma IsMulFreimanIso.threeGPFree_congr (hf : IsMulFreimanIso 2 s t f) :
     ThreeGPFree s ↔ ThreeGPFree t where
@@ -211,13 +211,11 @@ theorem ThreeGPFree.smul_set (hs : ThreeGPFree s) : ThreeGPFree (a • s) := by
 #noalign mul_salem_spencer.mul_right
 #noalign add_salem_spencer.add_right
 
-@[to_additive]
-theorem threeGPFree_smul_set : ThreeGPFree ((a * ·) '' s) ↔ ThreeGPFree s :=
-  ⟨fun hs b hb c hc d hd h ↦
-    mul_left_cancel
+@[to_additive] lemma threeGPFree_smul_set : ThreeGPFree (a • s) ↔ ThreeGPFree s where
+  mp hs b hb c hc d hd h := mul_left_cancel
       (hs (mem_image_of_mem _ hb) (mem_image_of_mem _ hc) (mem_image_of_mem _ hd) <| by
-        rw [mul_mul_mul_comm, h, mul_mul_mul_comm]),
-    ThreeGPFree.smul_set⟩
+        rw [mul_mul_mul_comm, smul_eq_mul, smul_eq_mul, mul_mul_mul_comm, h])
+  mpr := ThreeGPFree.smul_set
 #align mul_salem_spencer_mul_left_iff threeGPFree_smul_set
 #align add_salem_spencer_add_left_iff threeAPFree_vadd_set
 
@@ -246,8 +244,7 @@ section CancelCommMonoidWithZero
 
 variable [CancelCommMonoidWithZero α] [NoZeroDivisors α] {s : Set α} {a : α}
 
-theorem ThreeGPFree.smul_set₀ (hs : ThreeGPFree s) (ha : a ≠ 0) :
-    ThreeGPFree ((a * ·) '' s) := by
+lemma ThreeGPFree.smul_set₀ (hs : ThreeGPFree s) (ha : a ≠ 0) : ThreeGPFree (a • s) := by
   rintro _ ⟨b, hb, rfl⟩ _ ⟨c, hc, rfl⟩ _ ⟨d, hd, rfl⟩ h
   exact congr_arg (a • ·) $ hs hb hc hd $ by simpa [mul_mul_mul_comm _ _ a, ha] using h
 #align mul_salem_spencer.mul_left₀ ThreeGPFree.smul_set₀
