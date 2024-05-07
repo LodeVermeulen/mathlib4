@@ -49,7 +49,7 @@ instance triangleIndices.instExplicitDisjoint : ExplicitDisjoint (triangleIndice
     simp [Fin.val_eq_val, *] at * <;> assumption
 
 lemma noAccidental (hs : IsCornerFree (A : Set (G × G))) : NoAccidental (triangleIndices A) where
-  wow a a' b b' c c' ha hb hc := by
+  eq_or_eq_or_eq a a' b b' c c' ha hb hc := by
     simp only [mk_mem_triangleIndices] at ha hb hc
     exact .inl $ hs ⟨hc.1, hb.1, ha.1, hb.2.symm.trans ha.2⟩
 
