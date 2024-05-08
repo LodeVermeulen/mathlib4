@@ -91,8 +91,7 @@ theorem exists_add_pow_prime_eq (hp : p.Prime) (x y : R) :
 
 end CommSemiring
 
-section AddMonoidWithOne
-variable (R) [AddMonoidWithOne R] (p : ℕ)
+variable (R)
 
 /-- The generator of the kernel of the unique homomorphism ℕ → R for a semiring R.
 
@@ -105,28 +104,20 @@ For instance, endowing `{0, 1}` with addition given by `max` (i.e. `1` is absorb
 This example is formalized in `Counterexamples/CharPZeroNeCharZero.lean`.
 -/
 @[mk_iff]
-class CharP : Prop where
+class CharP [AddMonoidWithOne R] (p : ℕ) : Prop where
   cast_eq_zero_iff' : ∀ x : ℕ, (x : R) = 0 ↔ p ∣ x
 #align char_p CharP
 #align char_p_iff charP_iff
 
-variable [CharP R p] {a b : ℕ}
-
 -- Porting note: the field of the structure had implicit arguments where they were
 -- explicit in Lean 3
-lemma CharP.cast_eq_zero_iff (a : ℕ) : (a : R) = 0 ↔ p ∣ a := CharP.cast_eq_zero_iff' a
+theorem CharP.cast_eq_zero_iff (R : Type u) [AddMonoidWithOne R] (p : ℕ) [CharP R p] (x : ℕ) :
+    (x : R) = 0 ↔ p ∣ x :=
+CharP.cast_eq_zero_iff' (R := R) (p := p) x
 
-variable {R} in
-lemma CharP.congr {q : ℕ} (h : p = q) : CharP R q := h ▸ ‹CharP R p›
-#align char_p.congr CharP.congr
-
-lemma CharP.natCast_eq_natCast' (h : a ≡ b [MOD p]) : (a : R) = b := by
-  wlog hle : a ≤ b
-  · exact (this R p h.symm (le_of_not_le hle)).symm
-  rw [Nat.modEq_iff_dvd' hle] at h
-  rw [← Nat.sub_add_cancel hle, Nat.cast_add, (CharP.cast_eq_zero_iff R p _).mpr h, zero_add]
-
-@[simp] lemma CharP.cast_eq_zero : (p : R) = 0 := (CharP.cast_eq_zero_iff R p p).2 dvd_rfl
+@[simp]
+theorem CharP.cast_eq_zero [AddMonoidWithOne R] (p : ℕ) [CharP R p] : (p : R) = 0 :=
+  (CharP.cast_eq_zero_iff R p p).2 (dvd_refl p)
 #align char_p.cast_eq_zero CharP.cast_eq_zero
 
 -- See note [no_index around OfNat.ofNat]
@@ -136,36 +127,9 @@ lemma CharP.natCast_eq_natCast' (h : a ≡ b [MOD p]) : (a : R) = b := by
 -- is too expensive. If lean4#2867 is fixed in a performant way, this can be made `@[simp]`.
 --
 -- @[simp]
-lemma CharP.ofNat_eq_zero [p.AtLeastTwo] : no_index (OfNat.ofNat p : R) = 0 := cast_eq_zero R p
-
-lemma CharP.natCast_eq_natCast_mod (a : ℕ) : (a : R) = a % p :=
-  natCast_eq_natCast' R p (Nat.mod_modEq a p).symm
-
-lemma CharP.eq {p q : ℕ} (_hp : CharP R p) (_hq : CharP R q) : p = q :=
-  Nat.dvd_antisymm ((cast_eq_zero_iff R p q).1 (cast_eq_zero _ _))
-    ((cast_eq_zero_iff R q p).1 (cast_eq_zero _ _))
-#align char_p.eq CharP.eq
-
-instance CharP.ofCharZero [CharZero R] : CharP R 0 where
-  cast_eq_zero_iff' x := by rw [zero_dvd_iff, ← Nat.cast_zero, Nat.cast_inj]
-#align char_p.of_char_zero CharP.ofCharZero
-
-variable [IsRightCancelAdd R]
-
-lemma CharP.natCast_eq_natCast : (a : R) = b ↔ a ≡ b [MOD p] := by
-  wlog hle : a ≤ b
-  · rw [eq_comm, this R p (le_of_not_le hle), Nat.ModEq.comm]
-  rw [Nat.modEq_iff_dvd' hle, ← CharP.cast_eq_zero_iff R p (b - a),
-    ← add_right_cancel_iff (G := R) (a := a) (b := b - a), zero_add, ← Nat.cast_add,
-    Nat.sub_add_cancel hle, eq_comm]
-#align char_p.nat_cast_eq_nat_cast CharP.natCast_eq_natCast
-
-lemma CharP.natCast_injOn_Iio : (Set.Iio p).InjOn ((↑) : ℕ → R) :=
-  fun _a ha _b hb hab ↦ ((natCast_eq_natCast _ _).1 hab).eq_of_lt_of_lt ha hb
-
-end AddMonoidWithOne
-
-variable (R)
+theorem CharP.ofNat_eq_zero [AddMonoidWithOne R] (p : ℕ) [p.AtLeastTwo] [CharP R p] :
+    (no_index (OfNat.ofNat p : R)) = 0 :=
+  cast_eq_zero R p
 
 @[simp]
 theorem CharP.cast_card_eq_zero [AddGroupWithOne R] [Fintype R] : (Fintype.card R : R) = 0 := by
@@ -173,7 +137,7 @@ theorem CharP.cast_card_eq_zero [AddGroupWithOne R] [Fintype R] : (Fintype.card 
 #align char_p.cast_card_eq_zero CharP.cast_card_eq_zero
 
 theorem CharP.addOrderOf_one (R) [Semiring R] : CharP R (addOrderOf (1 : R)) :=
-  ⟨fun n => by rw [← Nat.smul_one_eq_coe, addOrderOf_dvd_iff_nsmul_eq_zero]⟩
+  ⟨fun n => by rw [← Nat.smul_one_eq_cast, addOrderOf_dvd_iff_nsmul_eq_zero]⟩
 #align char_p.add_order_of_one CharP.addOrderOf_one
 
 theorem CharP.intCast_eq_zero_iff [AddGroupWithOne R] (p : ℕ) [CharP R p] (a : ℤ) :
@@ -192,9 +156,42 @@ theorem CharP.intCast_eq_intCast [AddGroupWithOne R] (p : ℕ) [CharP R p] {a b 
   rw [eq_comm, ← sub_eq_zero, ← Int.cast_sub, CharP.intCast_eq_zero_iff R p, Int.modEq_iff_dvd]
 #align char_p.int_cast_eq_int_cast CharP.intCast_eq_intCast
 
+theorem CharP.natCast_eq_natCast' [AddMonoidWithOne R] (p : ℕ) [CharP R p] {a b : ℕ}
+    (h : a ≡ b [MOD p]) : (a : R) = b := by
+  wlog hle : a ≤ b
+  · exact (this R p h.symm (le_of_not_le hle)).symm
+  rw [Nat.modEq_iff_dvd' hle] at h
+  rw [← Nat.sub_add_cancel hle, Nat.cast_add, (CharP.cast_eq_zero_iff R p _).mpr h, zero_add]
+
+theorem CharP.natCast_eq_natCast [AddMonoidWithOne R] [IsRightCancelAdd R] (p : ℕ) [CharP R p]
+    {a b : ℕ} : (a : R) = b ↔ a ≡ b [MOD p] := by
+  wlog hle : a ≤ b
+  · rw [eq_comm, this R p (le_of_not_le hle), Nat.ModEq.comm]
+  rw [Nat.modEq_iff_dvd' hle, ← CharP.cast_eq_zero_iff R p (b - a),
+    ← add_right_cancel_iff (G := R) (a := a) (b := b - a), zero_add, ← Nat.cast_add,
+    Nat.sub_add_cancel hle, eq_comm]
+#align char_p.nat_cast_eq_nat_cast CharP.natCast_eq_natCast
+
+lemma CharP.natCast_injOn_Iio (R) [AddMonoidWithOne R] (p : ℕ) [CharP R p] [IsRightCancelAdd R] :
+    (Set.Iio p).InjOn ((↑) : ℕ → R) :=
+  fun _a ha _b hb hab ↦ ((natCast_eq_natCast _ _).1 hab).eq_of_lt_of_lt ha hb
+
 theorem CharP.intCast_eq_intCast_mod [AddGroupWithOne R] (p : ℕ) [CharP R p] {a : ℤ} :
     (a : R) = a % (p : ℤ) :=
   (CharP.intCast_eq_intCast R p).mpr (Int.mod_modEq a p).symm
+
+theorem CharP.natCast_eq_natCast_mod [AddMonoidWithOne R] (p : ℕ) [CharP R p] {a : ℕ} :
+    (a : R) = a % p :=
+  CharP.natCast_eq_natCast' R p (Nat.mod_modEq a p).symm
+
+theorem CharP.eq [AddMonoidWithOne R] {p q : ℕ} (_c1 : CharP R p) (_c2 : CharP R q) : p = q :=
+  Nat.dvd_antisymm ((CharP.cast_eq_zero_iff R p q).1 (CharP.cast_eq_zero _ _))
+    ((CharP.cast_eq_zero_iff R q p).1 (CharP.cast_eq_zero _ _))
+#align char_p.eq CharP.eq
+
+instance CharP.ofCharZero [AddMonoidWithOne R] [CharZero R] : CharP R 0 :=
+  ⟨fun x => by rw [zero_dvd_iff, ← Nat.cast_zero, Nat.cast_inj]⟩
+#align char_p.of_char_zero CharP.ofCharZero
 
 theorem CharP.exists [NonAssocSemiring R] : ∃ p, CharP R p :=
   letI := Classical.decEq R
@@ -227,6 +224,11 @@ theorem CharP.exists_unique [NonAssocSemiring R] : ∃! p, CharP R p :=
   let ⟨c, H⟩ := CharP.exists R
   ⟨c, H, fun _y H2 => CharP.eq R H2 H⟩
 #align char_p.exists_unique CharP.exists_unique
+
+theorem CharP.congr {R : Type u} [AddMonoidWithOne R] {p : ℕ} (q : ℕ) [hq : CharP R q] (h : q = p) :
+    CharP R p :=
+  h ▸ hq
+#align char_p.congr CharP.congr
 
 /-- Noncomputable function that outputs the unique characteristic of a semiring. -/
 noncomputable def ringChar [NonAssocSemiring R] : ℕ :=
