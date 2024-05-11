@@ -3,7 +3,11 @@ Copyright (c) 2022 Yaël Dillies. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Yaël Dillies
 -/
-import Mathlib.Algebra.CharP.Basic
+import Mathlib.Algebra.BigOperators.Ring
+import Mathlib.Algebra.CharP.Defs
+import Mathlib.Algebra.Order.BigOperators.Group.Multiset
+import Mathlib.Data.Set.Pointwise.Basic
+import Mathlib.Data.ZMod.Defs
 
 #align_import algebra.hom.freiman from "leanprover-community/mathlib"@"f694c7dead66f5d4c80f446c796a5aad14707f0e"
 
