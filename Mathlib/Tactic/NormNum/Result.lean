@@ -4,10 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Mario Carneiro
 -/
 import Mathlib.Algebra.Field.Defs
-import Mathlib.Algebra.Invertible.GroupWithZero
-import Mathlib.Data.Sigma.Basic
+import Mathlib.Algebra.GroupWithZero.Invertible
 import Mathlib.Algebra.Ring.Nat
 import Mathlib.Data.Int.Cast.Basic
+import Mathlib.Data.Sigma.Basic
 import Qq.MetaM
 
 /-!

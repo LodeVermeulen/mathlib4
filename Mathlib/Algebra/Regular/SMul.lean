@@ -3,7 +3,7 @@ Copyright (c) 2021 Damiano Testa. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Damiano Testa
 -/
-import Mathlib.Algebra.SMulWithZero
+import Mathlib.Algebra.GroupWithZero.Action.Defs
 import Mathlib.Algebra.Regular.Basic
 
 #align_import algebra.regular.smul from "leanprover-community/mathlib"@"550b58538991c8977703fdeb7c9d51a5aa27df11"

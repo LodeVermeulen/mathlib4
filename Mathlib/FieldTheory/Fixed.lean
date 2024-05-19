@@ -3,7 +3,7 @@ Copyright (c) 2020 Kenny Lau. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kenny Lau
 -/
-import Mathlib.Algebra.GroupRingAction.Invariant
+import Mathlib.Algebra.Ring.Action.Invariant
 import Mathlib.Algebra.Polynomial.GroupRingAction
 import Mathlib.FieldTheory.Normal
 import Mathlib.FieldTheory.Separable

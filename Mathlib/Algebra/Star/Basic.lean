@@ -4,15 +4,13 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
 import Mathlib.Algebra.Field.Opposite
-import Mathlib.Algebra.Invertible.Defs
+import Mathlib.Algebra.Group.Invertible.Defs
 import Mathlib.Algebra.Ring.Aut
 import Mathlib.Algebra.Ring.CompTypeclasses
-import Mathlib.Algebra.Field.Opposite
-import Mathlib.Algebra.Invertible.Defs
 import Mathlib.Data.NNRat.Defs
 import Mathlib.Data.Rat.Cast.Defs
 import Mathlib.Data.SetLike.Basic
-import Mathlib.GroupTheory.GroupAction.Opposite
+import Mathlib.Algebra.GroupWithZero.Action.Defs
 
 #align_import algebra.star.basic from "leanprover-community/mathlib"@"31c24aa72e7b3e5ed97a8412470e904f82b81004"
 
