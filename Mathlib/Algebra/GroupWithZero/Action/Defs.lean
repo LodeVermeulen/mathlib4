@@ -511,7 +511,7 @@ def DistribMulAction.toAddEquiv [DistribMulAction G A] (x : G) : A ≃+ A where
 #align distrib_mul_action.to_add_equiv_apply DistribMulAction.toAddEquiv_apply
 #align distrib_mul_action.to_add_equiv_symm_apply DistribMulAction.toAddEquiv_symm_apply
 
-variable (M)
+variable (G M)
 
 /-- Each element of the monoid defines an additive monoid homomorphism. -/
 @[simps]

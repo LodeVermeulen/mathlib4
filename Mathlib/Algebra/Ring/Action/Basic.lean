@@ -29,11 +29,6 @@ group action, invariant subring
 
 -/
 
-variable {R : Type*}
-
-instance NonUnitalNonAssocSemiring.toDistribSMul [NonUnitalNonAssocSemiring R] :
-    DistribSMul R R where smul_add := mul_add
-
 universe u v
 
 /-- Typeclass for multiplicative actions by monoids on semirings.
